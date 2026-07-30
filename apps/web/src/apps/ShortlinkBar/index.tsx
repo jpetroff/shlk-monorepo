@@ -97,8 +97,7 @@ export default class ShortlinkBar extends React.Component<Props, State> {
 
       showSnoozeOptions: false
     }
-    
-    _.bindAll(this, ..._.functions(this))
+
     // this.submitDescriptor = _.debounce(this._submitDescriptor, 500)
   }
 
@@ -138,7 +137,7 @@ export default class ShortlinkBar extends React.Component<Props, State> {
     }
   }
 
-  private onGlobalKeypress(event: KeyboardEvent) {
+  private onGlobalKeypress = (event: KeyboardEvent) => {
     console.log(event)
     if( (event.ctrlKey || event.metaKey) && event.code == 'KeyD' ) {
       event.preventDefault()
@@ -158,7 +157,7 @@ export default class ShortlinkBar extends React.Component<Props, State> {
     ) this._setMobileConvenienceInput(true)
   }
 
-  updateLocation(newLocation: string, isClearPress: boolean = false) {
+  updateLocation = (newLocation: string, isClearPress: boolean = false) => {
     const keepSnoozeOptionsOpen = newLocation != '' && this.state.showSnoozeOptions
 
     this._clearErrorState()
@@ -266,7 +265,7 @@ export default class ShortlinkBar extends React.Component<Props, State> {
     })
   }
 
-  async submitLocation() {
+  submitLocation = async () => {
     this._clearErrorState()
     this.snoozeOptions(false)
 
@@ -312,7 +311,7 @@ export default class ShortlinkBar extends React.Component<Props, State> {
     this.submitLocation()
   }
 
-  handleDescriptorChange(value: string) {
+  handleDescriptorChange = (value: string) => {
     this._clearErrorState()
     this.setState({
       descriptionTag: modifyURLSlug(value),
@@ -321,7 +320,7 @@ export default class ShortlinkBar extends React.Component<Props, State> {
   }
 
   // public submitDescriptor: (() => void) & _.Cancelable;
-  private async submitDescriptor() {
+  private submitDescriptor = async () => {
     this._clearErrorState()
     console.log('[Home → submitDescriptor]\n', this.state.userTag, this.state.descriptionTag)
 
@@ -365,14 +364,14 @@ export default class ShortlinkBar extends React.Component<Props, State> {
     this.setState({loadingState: {createDescriptiveLinkIsLoading: false}})
   }
 
-  private _clearErrorState(): void {
+  private _clearErrorState = (): void => {
     this.setState({ errorState: {
       lastError: undefined,
       createDescriptiveLinkResult: this.state.errorState.createDescriptiveLinkResult
     } })
   }
 
-  private _clearSuccessState(): void {
+  private _clearSuccessState = (): void => {
     this.setState({ successState: {} })
   }
 
@@ -388,11 +387,11 @@ export default class ShortlinkBar extends React.Component<Props, State> {
     }
   }
 
-  private _onHeroInputElementFocus(event: React.FocusEvent<HTMLInputElement>) : void {
+  private _onHeroInputElementFocus = (event: React.FocusEvent<HTMLInputElement>) : void => {
     this._setMobileConvenienceInput(true)
   }
 
-  public async handleStandardSnooze(predefinedValue: string) {
+  public handleStandardSnooze = async (predefinedValue: string) => {
     const baseDateISOString = (new Date()).toISOString()
     try {
       const location = linkTools.fixUrl(this.state.location)
