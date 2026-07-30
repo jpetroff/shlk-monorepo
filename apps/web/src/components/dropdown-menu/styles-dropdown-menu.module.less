@@ -1,0 +1,58 @@
+@import (reference) '../../css/_constants.less';
+
+@appear-transition: 100ms;
+
+:export {
+	appearTransition: @appear-transition
+}
+
+
+:local(.wrapperClass)_dropdown-menu {
+  box-sizing: border-box;
+  box-shadow: @shadow-light-30, @thin-shadow-stroke;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  background: @black-100;
+  position: absolute;
+  z-index: @z-popup-middle;
+  display: none;
+  flex-direction: column;
+  opacity: 1;
+  transition: opacity @appear-transition ease-in-out, top @appear-transition ease-in-out;
+  user-select: none;
+
+  &_top {
+    top: 0;
+  }
+
+  &_bottom {
+    top: 100%;
+  }
+
+  &_left {
+    left: 0;
+  }
+
+  &_right {
+    right: 0;
+  }
+
+  &-enter {
+    display: flex;
+    opacity: 0;
+  }
+  &-enter-done {
+    display: flex;
+    opacity: 1;
+  }
+  &-enter&_top {
+    top: 1rem;
+  }
+  &-enter&_bottom {
+    top: ~"calc(100% - 1rem)"; 
+  }
+  &-exit-active{
+    display: flex;
+  }
+}
+

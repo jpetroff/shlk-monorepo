@@ -1,0 +1,11 @@
+node_modules/
+bun.lockb
+.env
+.env.*
+!.env.example
+apps/*/dist/
+apps/*/*.crx
+apps/*/*.zip
+coverage/
+*.log
+.DS_Store

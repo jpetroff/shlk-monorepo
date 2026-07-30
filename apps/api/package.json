@@ -1,0 +1,36 @@
+{
+  "name": "@shlk/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --preload ./src/bun-compat.ts --watch src/index.ts",
+    "dev:extension": "bun --preload ./src/bun-compat.ts --watch src/index.ts",
+    "start": "NODE_ENV=production bun --preload ./src/bun-compat.ts src/index.ts",
+    "build": "bun run typecheck",
+    "lint": "bun run --cwd ../../tools/lint lint:api",
+    "typecheck": "bunx tsc -p tsconfig.json",
+    "test": "bun test test"
+  },
+  "dependencies": {
+    "@graphql-tools/merge": "9.2.2",
+    "@graphql-tools/schema": "10.0.38",
+    "axios": "1.18.1",
+    "connect-mongo": "6.0.0",
+    "express": "5.2.1",
+    "express-session": "1.19.0",
+    "google-auth-library": "10.9.1",
+    "googleapis": "173.0.0",
+    "graphql": "17.0.2",
+    "helmet": "8.3.0",
+    "mongodb": "7.5.0",
+    "mongoose": "9.8.1",
+    "mongoose-unique-validator": "6.1.1",
+    "node-html-parser": "9.0.1",
+    "underscore": "1.13.8"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/express-session": "1.19.0",
+    "@types/underscore": "1.13.0"
+  }
+}

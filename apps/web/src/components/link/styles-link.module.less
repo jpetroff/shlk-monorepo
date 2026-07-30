@@ -1,0 +1,113 @@
+@import (reference) '../../css/_constants.less';
+
+@swap-duration: 1000ms;
+
+:export {
+  swapDuration: @swap-duration
+}
+
+.link-loading-gradient {
+  background-image: linear-gradient(to right, 
+      rgba(@black-60, 1) 0%,
+      rgba(@black-60, 1) 30%,
+      rgba(@black-60, 0.1) 48%,
+      rgba(@black-60, 0.1) 52%,
+      rgba(@black-60, 1) 70%,
+      rgba(@black-60, 1) 100%
+    );
+}
+.link-loading-mixin {
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: loading 2s linear infinite;
+  color: transparent;
+}
+
+.link-block {
+  cursor: pointer;
+}
+
+:local(.wrapperClass)_link {
+  box-sizing: border-box;
+  text-decoration: none !important;
+  cursor: pointer;
+  outline: @pure-blue-70;
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+
+  &_inline {
+    display: inline;
+  }
+
+  &_app, &:visited {
+    color: @pure-blue-50;
+  }
+  &_user {
+    color: @blue-50;
+  }
+  &_user:visited {
+    color: @purple-20;
+  }
+
+  &:hover, .link-block:hover & {
+    color: @red-50;
+  }
+  &:active, .link-block:active & {
+    color: @red-40;
+  }
+
+  &_disabled, 
+  &_disabled:visited,
+  &_disabled:active,
+  &_disabled:hover {
+    color: @black-60;
+    cursor: not-allowed;
+  }
+
+  &_loading {
+    color: transparent;
+    .link-loading-gradient;
+    .link-loading-mixin;
+  }
+
+  &__action-hint,
+  &__separator {
+    opacity: 1;
+    .t-micricopy_13-16;
+    height: 1rem;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+    transition: opacity 0.1s ease-in-out;
+  }
+
+
+  &__action-hint__animated-inner {
+    position: relative;
+    // display: flex;
+    animation-timing-function: ease-in;
+    animation-duration: @swap-duration;
+    animation-timing-function: ease-in-out;
+  }
+  &__action-hint__animated-inner-active {
+    animation-name: test-swap;
+  }
+}
+
+@keyframes test-swap {
+  0% {
+    top: 0rem;
+  }
+  12% {
+    top: -1rem;
+  }
+  88% {
+    top: -1rem;
+  }
+  100% {
+    top: 0;
+  }
+}

@@ -1,0 +1,110 @@
+@import (reference) '../../css/_constants.less';
+
+@field-padding: 0.75rem;
+
+:local(.wrapperClass)_user-settings {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  flex: 1;
+
+  &__header {
+    display: flex;
+    flex-direction: row;
+    gap: 1.25rem;
+    align-items: flex-end;
+    padding: 0 @field-padding;
+
+    &__avatar {
+      width: 3.875rem;
+      height: 3.875rem;
+      border-radius: 3.875rem;
+      overflow: hidden;
+      margin-left: -0.25rem;
+    }
+
+    &__img-source {
+      width: 100%;
+      height: 100%;
+    }
+
+    &__name {
+      color: @black-30;
+      .t-text_16-20;
+    }
+
+    &__email {
+      .t-micricopy_13-16;
+      color: @black-50;
+    }
+  }
+
+  &__name-block {
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 0.5rem;
+    gap: 0.125rem;
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    &__label {
+      .t-micricopy_13-16;
+      padding-left: @field-padding;
+      color: @black-30;
+    }
+  }
+
+  &__submit {
+    display: flex;
+    flex-direction: row;
+    margin-top: 1rem;
+  }
+
+  &__snackbar-container {
+    position: absolute;
+    bottom: 2.75rem;
+    left: 1.25rem;
+    right: 1.25rem;
+
+    @media @mq-mobile {
+      position: fixed;
+    }
+  }
+  &__profile-error,
+  &__profile-success {
+    width: 100%;
+    min-width: auto;
+  }
+
+  &__download {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: @label-gap;
+
+    &__label {
+      .t-micricopy_13-16;
+      color: @black-30;
+      flex-grow: 1;
+      padding-left: @field-padding;
+    }
+
+    &__link {
+      border-radius: 4px;
+      box-shadow: @shadow-light-20, @thin-shadow-stroke;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+    }
+
+    &__link-content {
+      width: 160px;
+      height: 46px;
+    }
+  }
+}

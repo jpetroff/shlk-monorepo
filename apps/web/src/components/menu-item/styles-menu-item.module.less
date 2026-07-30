@@ -1,0 +1,47 @@
+@import (reference) '../../css/_constants.less';
+
+:local(.wrapperClass)_menu-item {
+  height: 2rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 0 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  color: @black-30;
+  flex-grow: 1;
+
+  &__label {
+    .t-micricopy_13-16;
+  }
+  &_keep-space &__label {
+    padding-left: 2rem;
+  }
+
+  &:hover {
+    background-color: @black-95;
+    color: @black-20;
+  }
+
+  &__icon {
+    margin: 0 0.75rem 0 0;
+  }
+
+  &_disabled {
+    color: @black-50;
+
+    &:hover {
+      background-color: @black-100;
+      color: @black-50;
+      cursor: not-allowed;
+    }
+  }
+}
+
+:local(.wrapperClass)__separator {
+  height: 1px;
+  flex-grow: 1;
+  display: flex;
+  margin: 0.5rem 0;
+  background-color: @black-90;
+}

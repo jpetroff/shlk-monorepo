@@ -1,0 +1,101 @@
+@import (reference) '../../css/_constants.less';
+
+:local(.wrapperClass)_input {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  flex-shrink: 1;
+  gap: @label-gap;
+
+  &__label {
+    .t-micricopy_13-16;
+    color: @black-30;
+    padding: 0 0.75rem;
+  }
+
+  &__input-inner {
+    position: relative;
+    display: flex;
+    flex-grow: 1;
+    flex-shrink: 1;
+  }
+
+  &__input-wrapper {
+    position: relative;
+    display: flex;
+    flex-grow: 1;
+    flex-direction: row;
+    gap: 0.25rem;
+    background-color: @pure-blue-95;
+    padding: 0.5rem calc(0.75rem - 0.125rem);
+    border: 0.125rem solid @pure-blue-50;
+    border-radius: 4px;
+    align-items: center;
+  }
+
+  &__input-wrapper:focus-within {
+    box-shadow: @active-highlight;
+  }
+
+  &__input-element {
+    .t-text_16-20;
+    line-height: 1.5rem;
+    outline: none;
+    background-color: transparent;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    flex-shrink: 1;
+    z-index: 1;
+    border: none;
+    padding: 0;
+    
+    // min-width flex hack
+    width: 4rem;
+  }
+
+  &__placeholder {
+    .t-text_16-20;
+    line-height: 1.5rem;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    color: @black-50;
+    z-index: 0;
+  }
+  &_not-empty &__placeholder {
+    display: none;
+  }
+
+  &__left-icon,
+  &__right-icon {
+    color: @black-50;
+  }
+  &__left-icon {
+    margin-left: -0.125rem;
+  }
+  &__right-icon {
+    margin-right: -0.125rem;
+  }
+  &__clear {
+    display: none;
+    margin-right: -0.25rem;
+  }
+  &_not-empty &__right-icon { display: none; }
+
+  &_not-empty &__clear { display: flex; }
+
+  &__prefix,
+  &__suffix {
+    display: flex;
+    align-items: center;
+    line-height: 1.5rem;
+    height: 1.5rem;
+    color: @black-50;
+    gap: 0.25rem;
+  }
+
+
+}

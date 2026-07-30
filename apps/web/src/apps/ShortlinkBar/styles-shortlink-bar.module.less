@@ -1,0 +1,150 @@
+@import (reference) '../../css/_constants.less';
+
+@mq-footer-height: 1.875rem;
+@mq-mobile-footer-height: 3.0625rem;
+
+:local(.homepage) {
+  background-color: white;
+}
+
+:local(.homepage)_app-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  margin: 0;
+  
+  @media @mq-mobile {
+    height: ~"calc(100% + @{mq-mobile-footer-height})";
+  }
+
+  &__layout {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    .main-page-width-mixin;
+    margin: 0 auto; 
+
+    @media @mq-mobile {
+      margin: 0 1.25rem;
+      width: auto;
+      justify-content: flex-end;
+    }
+  }
+
+  &__shortlink-block {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  @media @mq-mobile {
+    &__shortlink-block {
+      flex-grow: 1;
+      justify-content: center;
+    }
+  }
+
+  &__offset-wrapper {
+    height: ~"calc(50vh - @{mq-header-height})"; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2.75rem;
+    width: 100%;
+
+    @media @mq-mobile {
+      height: auto;
+      padding-top: 2.5rem;
+    }
+  }
+  @media @mq-mobile {
+    &__offset-wrapper {
+      height: auto;
+      padding-top: 2.5rem;
+      gap: 1rem;
+    }
+    .__mobile-convenience-state &__offset-wrapper {
+      padding: 0;
+    }
+  }
+
+  @media @mq-mobile {
+    .__mobile-convenience-state&__shortlink-block {
+      position: absolute;
+      z-index: @z-static-top + 2;
+      top: 0;
+      left: 0;
+      right: 0;
+      background-color: @black-100;
+      box-shadow: @shadow-light-20, @thin-shadow-stroke;
+      border-radius: 0px 0px 0.5rem 0.5rem;
+    }
+  }
+
+  &__video {
+    width: 320px;
+  }
+  @media @mq-mobile {
+    &__video {
+      width: 260px;
+    }
+  }
+
+  &__snackbar-container {
+    position: absolute;
+    top: 100%;
+    padding-top: 1.25rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  @media @mq-mobile {
+    &__snackbar-container {
+      position: absolute;
+      top: 100%;
+      padding-top: 1.25rem;
+      padding-left: 2rem;
+      padding-right: 2rem;
+      left: 0;
+      right: 0;
+      transform: none;
+    }
+  }
+
+  &__footer-wrapper {
+    display: flex;
+    flex-grow: 1;
+    flex-direction: column;
+
+    &:before {
+      content: '';
+      display: flex;
+      flex-grow: 1;
+      flex-shrink: 1;
+      width: 100%;
+    }
+  }
+  @media @mq-mobile {
+    &__footer-wrapper {
+      flex-grow: 0;
+    }
+  }
+
+  &__flyover {
+    font-size: @13_16_microcopy;
+    line-height: 1rem;
+  }
+  &__logged-content,
+  &__anonymous-content {
+    min-width: 10rem;
+    max-width: 14rem;
+    text-align: center;
+  }
+
+  .extension &__logged-content,
+  .extension &__anonymous-content {
+    text-align: left;
+  }
+}
+

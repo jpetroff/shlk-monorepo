@@ -1,0 +1,39 @@
+{
+  "name": "@shlk/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --mode webapp",
+    "dev:extension": "vite build --mode extension-development --watch",
+    "build": "bun run build:web && bun run build:extension",
+    "build:web": "vite build --mode webapp",
+    "build:extension": "vite build --mode extension",
+    "lint": "bun run --cwd ../../tools/lint lint:web",
+    "typecheck": "bunx tsc -p tsconfig.json",
+    "test": "bun test test"
+  },
+  "dependencies": {
+    "axios": "1.18.1",
+    "classnames": "2.5.1",
+    "dayjs": "1.11.21",
+    "graphiql": "5.2.4",
+    "graphql": "17.0.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-router": "8.3.0",
+    "react-transition-group": "4.4.5",
+    "underscore": "1.13.8"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@types/react-transition-group": "4.4.12",
+    "@types/underscore": "1.13.0",
+    "@vitejs/plugin-react": "6.0.4",
+    "chrome-types": "0.1.436",
+    "less": "4.8.1",
+    "vite": "8.1.5",
+    "vite-plugin-svgr": "5.2.0"
+  }
+}
+

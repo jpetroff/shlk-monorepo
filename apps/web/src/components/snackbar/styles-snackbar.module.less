@@ -1,0 +1,98 @@
+@import (reference) '../../css/_constants.less';
+
+@transition-duration: 150ms;
+
+:export {
+	transitionDuration: @transition-duration
+}
+
+:local(.wrapperClass)_snackbar {
+	box-sizing: border-box;
+	border-radius: 0.5rem;
+	background-color: rgba(@black-10, 0.96);
+	box-shadow: @shadow-light-30;
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	min-width: 15.5rem;
+	transition: opacity @transition-duration ease-in, top @transition-duration ease-in;
+	overflow: hidden;
+
+	@media @mq-not-mobile {
+    min-width: 24rem;
+		max-width: 30rem;
+	}
+
+	&__content-wrapper {
+		padding: 0 0 0.75rem 1rem;
+		display: flex;
+		flex-direction: row;
+		gap: 1.5rem;
+	}
+
+	&__message {
+		.t-micricopy_13-16;
+		color: @black-100;
+		flex-grow: 1;
+		padding-top: 0.75rem;
+    word-break: break-word;
+	}
+
+	&__dismiss {
+		color: @black-70;
+		padding: 0.75rem 0.75rem 0 0;
+    flex-grow: 0;
+    flex-shrink: 0;
+		cursor: pointer;
+		width: 1rem;
+		height: 1rem;
+	}
+
+	&__snackbar-action {
+		display: flex;
+		padding: 0.5rem 0.75rem 0.75rem 0;
+		align-self: flex-end;
+		color: @pure-blue-80;
+    flex-shrink: 0;
+		.t-micricopy_13-16;
+	}
+
+	&__transition-appear,
+	&__transition-enter {
+		opacity: 0;
+		top: 0.5rem;
+	}
+	&__transition-appear-active,
+	&__transition-enter-active {
+		opacity: 1;
+		top: 0;
+	}
+	&__transition-exit {
+		opacity: 1;
+		top: 0;
+	}
+	&__transition-exit-active {
+		opacity: 0;
+		top: 0.5rem;
+	}
+
+	&__timer-progress {
+		animation-name: timer-progress-animation;
+		animation-timing-function: linear;
+		height: 2px;
+		width: 100%;
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		background-color: @black-90;
+	}
+}
+
+@keyframes timer-progress-animation {
+	from {
+		width: 0%;
+	}
+	to {
+		width: 100%;
+	}	
+}

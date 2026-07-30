@@ -1,0 +1,38 @@
+{
+    "manifest_version": 3,
+    "version": "1.2.26",
+    "name": "shlk.cc — copy and create shortlinks",
+    "icons": {
+        "128": "/assets/favicon/chrome_extension_icon.png"
+    },
+    "permissions": [
+        "tabs",
+        "clipboardRead",
+        "clipboardWrite",
+        "alarms",
+        "storage",
+        "notifications"
+    ],
+    "optional_permissions": [],
+    "host_permissions": [
+        "https://shlk.cc/*",
+        "http://localhost:8002/*"
+    ],
+    "action": {
+        "default_popup": "index.html",
+        "default_icon": "/assets/favicon/chrome_extension_icon.png"
+    },
+    "background": {
+        "service_worker": "js/background.js",
+        "type": "module"
+    },
+    "commands": {
+        "_execute_action": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+S",
+                "mac": "Command+Shift+S"
+            },
+            "description": "Open share link extension popup to shorten URL or snooze it"
+        }
+    }
+}

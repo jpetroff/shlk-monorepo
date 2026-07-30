@@ -1,0 +1,48 @@
+@import (reference) '../../css/_constants.less';
+
+:local(.wrapperClass)_radio-group {
+  box-sizing: border-box;
+  height: 2.75rem;
+  display: flex;
+  flex-direction: row;
+  padding: 4px;
+  background-color: @black-95;
+  border-radius: 4px;
+  gap: 4px;
+
+  &_full-width {
+    width: 100%; 
+  }
+
+  &__radio-button {
+    .t-text_16-20;
+    border-radius: 2px;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    cursor: pointer;
+    align-items: center;
+    color: @black-20;
+    user-select: none;
+    min-width: 2.25rem;
+    flex-grow: 0;
+    flex-shrink: 1;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      color: @black-10;
+    }
+
+    &_active {
+      background-color: @black-100;
+      box-shadow: @shadow-light-20;
+      color: @black-30;
+    }
+  }
+  &_full-width &__radio-button {
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+  }
+}

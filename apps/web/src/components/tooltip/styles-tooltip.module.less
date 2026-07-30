@@ -1,0 +1,46 @@
+@import (reference) '../../css/_constants.less';
+
+@flyover-duration: 350ms;
+@opacity-end-duration: 300ms;
+
+:export {
+  flyoverDuration: @flyover-duration;
+  opacityEndDuration: @opacity-end-duration;
+}
+
+:local(.tooltipClass)_tooltip {
+  box-sizing: border-box;
+}
+
+:local(.flyoverClass)_flyover {
+  box-sizing: border-box;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  transition: opacity @opacity-end-duration ease-in, top @flyover-duration ease-out;
+  opacity: 0;
+  color: @purple-20;
+  font-size: inherit;
+  line-height: inherit;
+  text-shadow: 1px 1px 0.25em @black-100, -1px 1px 0.25em @black-100, 1px -1px 0.25em @black-100, -1px -1px 0.25em @black-100;
+  z-index: 99999;
+}
+
+.flyover-animation-appear,
+.flyover-animation-enter {
+  top: 50%;
+  opacity: 0;
+}
+
+.flyover-animation-appear-active,
+.flyover-animation-enter-active {
+  top: -0.75em;
+  opacity: 1;
+}
+
+.flyover-animation-appear-done,
+.flyover-animation-enter-done {
+  top: -0.75em;
+  opacity: 0;
+}

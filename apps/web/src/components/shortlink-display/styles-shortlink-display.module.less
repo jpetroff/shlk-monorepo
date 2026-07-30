@@ -1,0 +1,129 @@
+@import (reference) '../../css/_constants.less'; 
+
+:local(.wrapperClass)_shortlink-display {
+  .t-header_24-32;
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+
+  @media @mq-mobile {
+    padding: 1.25rem 0.75rem;
+
+    .__mobile-convenience-state & {
+      padding: 1rem 0.75rem 0.75rem 1.25rem;
+    }
+  }
+
+  &__content-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+  @media @mq-mobile {
+    &__content-wrapper {
+      gap: 0;
+      flex-grow: 1;
+    }
+  }
+
+  &__action-wrapper {
+    background: transparent;
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+    display: flex;
+    align-items: baseline;
+    gap: 1.25rem;
+    margin-left: -0.25rem;
+    cursor:initial;
+  }
+  @media @mq-not-mobile {
+    &__action-wrapper_has-shortlink {
+      transition: all 0.1s ease-in;
+      cursor: pointer;
+    }
+
+    &__action-wrapper_has-shortlink &__copy-pseudolink {
+      transition: all 0.1s ease-in;
+      position: relative;
+      top: 0;
+    }
+    &__action-wrapper_has-shortlink:hover { 
+      background-color: @black-95;
+    }
+    &__action-wrapper_has-shortlink:hover &__text { color: @black-10; }
+    &__action-wrapper_has-shortlink:hover &__copy-pseudolink { top: -0.125rem; }
+  }
+
+  &__text {
+    color: @black-30;
+
+    &_loading{
+      color: transparent !important;
+      .shortlink-display-loading-gradient;
+      .shortlink-display-loading-mixin;
+    }
+    &_placeholder-spacing {
+      letter-spacing: 0.5rem;
+      margin-left: 0.4rem;
+    }
+  }
+  &_empty &__text {
+    color: @black-70
+  }
+  &_error &__text {
+    color: @red-40;
+  }
+  @media @mq-mobile {
+    &__text { 
+      flex-grow: 1;
+    }
+    &_empty &__text {
+      flex-grow: 0;
+    }
+  }
+
+  
+
+  &__copy-pseudolink {
+    .t-text_16-20;
+  }
+  @media @mq-mobile {
+    &__copy-pseudolink {
+      display: none;
+    }
+  }
+
+  &__copy-button {
+    display: none;
+  }
+  @media @mq-mobile {
+    &__copy-button {
+      display: flex;
+    }
+  }
+
+  &__label{
+    .t-micricopy_13-16;
+    color: @black-30;
+    display: inline-block;
+  }
+}
+
+.shortlink-display-loading-gradient {
+	background: linear-gradient(to right, 
+			rgba(@black-60, 1) 0%,
+			rgba(@black-60, 1) 30%,
+			rgba(@black-60, 0.1) 48%,
+			rgba(@black-60, 0.1) 52%,
+			rgba(@black-60, 1) 70%,
+			rgba(@black-60, 1) 100%
+		);
+}
+.shortlink-display-loading-mixin {
+	background-size: 200% 100%;
+	-webkit-background-clip: text;
+	background-clip: text;
+	animation: loading 2s linear infinite;
+	color: transparent;
+}

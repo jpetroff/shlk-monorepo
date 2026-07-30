@@ -1,0 +1,25 @@
+@import (reference) '../../css/_constants.less';
+
+:local(.wrapperClass)_video {
+  box-sizing: border-box;
+  position: relative;
+
+  &__video-node {
+    &_responsive {
+      width: 100%;
+    }
+  }
+
+  &__thumbnail {
+    width: 100%;
+    z-index: 1;
+  }
+
+  &_show {
+    display: block;
+  }
+
+  &_hide {
+    display: none;
+  }
+}

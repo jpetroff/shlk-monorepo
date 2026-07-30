@@ -1,0 +1,22 @@
+{
+  "name": "shlk-monorepo",
+  "private": true,
+  "packageManager": "bun@1.3.14",
+  "workspaces": [
+    "apps/*",
+    "tools/*"
+  ],
+  "scripts": {
+    "dev": "bun run --parallel --filter @shlk/api --filter @shlk/web dev",
+    "dev:extension": "bun run --parallel --filter @shlk/api --filter @shlk/web dev:extension",
+    "build": "bun run --filter '*' build",
+    "start": "bun run --filter @shlk/api start",
+    "lint": "bun run --cwd tools/lint lint",
+    "typecheck": "bun run --filter '*' typecheck",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.14",
+    "typescript": "7.0.2"
+  }
+}
