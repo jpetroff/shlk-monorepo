@@ -8,4 +8,4 @@ apps/*/*.crx
 apps/*/*.zip
 coverage/
 *.log
-
+.DS_Store
