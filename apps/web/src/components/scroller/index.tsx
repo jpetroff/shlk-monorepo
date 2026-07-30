@@ -1,112 +1,66 @@
 import styles from './styles-scroller.module.less'
 import classNames from 'classnames'
 import * as React from 'react'
-import * as _ from 'underscore'
-import { DOMContentLoaded } from '../../js/utils'
 
-type Props = {
-  onScroll?: (scrollTop: number, scrollHeight: number, clientHeight: number, direction?: number) => void
-  padding?: number
-  offsetTop?: number
-  offsetBottom?: number
-  hideScroll?: boolean
-} & Omit<React.JSX.IntrinsicElements['div'], 'onScroll'>
+type Props = { onScroll?: (scrollTop: number, scrollHeight: number, clientHeight: number, direction?: number) => void,
+  padding?: number, offsetTop?: number, offsetBottom?: number, hideScroll?: boolean
+} & Omit<React.HTMLAttributes<HTMLDivElement>, 'onScroll'>
+type ScrollState = { position: number, previousHeight: number, top: number, height: number }
+const hiddenState: ScrollState = { position: -1, previousHeight: -1, top: 0, height: 0 }
 
-const Scroller : React.FC<Props> = (
-  providedArgs : Props 
-) => {
-  const args = {
-    ...providedArgs,
-    padding: providedArgs.padding ?? 8,
-    offsetTop: providedArgs.offsetTop ?? 0,
-    offsetBottom: providedArgs.offsetBottom ?? 0
-  }
-  const wrapperRef = React.useRef<HTMLDivElement>(null)
+export default function Scroller({ onScroll, padding = 8, offsetTop = 0, offsetBottom = 0,
+  hideScroll = false, className, children, ...htmlProps }: Props) {
   const contentRef = React.useRef<HTMLDivElement>(null)
-  const prevScrollheight = React.useRef<number>(-1)
-
-  const [scrollPos, setScrollPos] = React.useState(-1)
-  const [scrollbarStyles, setScrollbarStyles] = React.useState({})
-
+  const [scrollState, setScrollState] = React.useState(hiddenState)
+  const scrollStateRef = React.useRef(hiddenState)
   const globalClass = `${styles.wrapperClass}_scroller`
-  const scrollerClasses = classNames({
-    [`${globalClass}`]: true,
-    [`${args.className}`]: !!args.className
-  })
+  const classes = classNames(globalClass, className)
 
-  const internalScroll = (event?: React.UIEvent) => {
+  const measure = React.useCallback((notify: boolean) => {
     const content = contentRef.current
     if (!content) return
-    const scrollTop = content.scrollTop
-    const scrollHeight = content.scrollHeight
-    const clientHeight = content.clientHeight
-
-    if(args.hideScroll) return
-
-    if(scrollHeight <= clientHeight) {
-      if(scrollPos != -1) setScrollPos(-1)
+    const previous = scrollStateRef.current
+    if (hideScroll) {
+      if (previous.position !== -1) {
+        scrollStateRef.current = hiddenState
+        setScrollState(hiddenState)
+      }
       return
     }
-    if(scrollTop == scrollPos && scrollHeight == prevScrollheight.current) return
-    
-    if(_.isFunction(args.onScroll) && event) args.onScroll(scrollTop, scrollHeight, clientHeight, scrollTop - scrollPos)
+    const { scrollTop, scrollHeight, clientHeight } = content
+    if (scrollHeight <= clientHeight) {
+      if (previous.position !== -1) {
+        scrollStateRef.current = hiddenState
+        setScrollState(hiddenState)
+      }
+      return
+    }
+    if (scrollTop === previous.position && scrollHeight === previous.previousHeight) return
+    const effectiveHeight = clientHeight - (offsetBottom + offsetTop + 2 * padding)
+    const next = { position: scrollTop, previousHeight: scrollHeight,
+      top: Math.ceil((scrollTop / scrollHeight) * effectiveHeight) + offsetTop + padding,
+      height: Math.ceil(effectiveHeight * (effectiveHeight / scrollHeight)) }
+    scrollStateRef.current = next
+    setScrollState(next)
+    if (notify) onScroll?.(scrollTop, scrollHeight, clientHeight, scrollTop - previous.position)
+  }, [hideScroll, offsetBottom, offsetTop, onScroll, padding])
 
-    prevScrollheight.current = scrollHeight
-    setScrollPos(scrollTop)
-    setScrollbarStyles({ top: calcScrollbarTop(scrollPos), height: calcScrollbarHeight() })
-  }
-
-  const calcScrollbarTop = (scrollTop: number) => {
+  React.useEffect(() => {
     const content = contentRef.current
-    if (!content) return 0
-    const clientHeight = content.clientHeight
-    const scrollHeight = content.scrollHeight
+    if (!content || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => measure(false))
+    observer.observe(content)
+    if (content.firstElementChild) observer.observe(content.firstElementChild)
+    return () => observer.disconnect()
+  }, [measure])
 
-    const effectiveHeight = clientHeight - (args.offsetBottom + args.offsetTop + 2 * args.padding)
-
-    return Math.ceil( (scrollTop / scrollHeight) * effectiveHeight ) + args.offsetTop + args.padding
-  }
-  const calcScrollbarHeight = () => {
-    const content = contentRef.current
-    if (!content) return 0
-    const clientHeight = content.clientHeight
-    const scrollHeight = content.scrollHeight
-
-    const effectiveHeight = clientHeight - (args.offsetBottom + args.offsetTop + 2 * args.padding)
-    return Math.ceil(effectiveHeight * (effectiveHeight / scrollHeight))
-  }
-
-  React.useEffect( () => {
-    internalScroll()
-  })
-
-  const transientProps = _.omit(args, 'onScroll', 'ref', 'className', 'padding', 'offsetTop', 'offsetBottom', 'hideScroll')
-  return (
-    <div
-      className={`${scrollerClasses}`}
-      {...transientProps}
-      >
-        <div 
-          className={`${globalClass}__scroller-wrapper`} 
-          ref={wrapperRef}>
-
-          <div 
-            className={`${globalClass}__scroller-content`}
-            ref={contentRef}
-            onScroll={internalScroll}
-            >
-            {args.children}
-          </div> 
-        </div>
-
-        {
-          scrollPos >= 0 &&
-          <div className={`${globalClass}__scrollbar`}>
-            <div className={`${globalClass}__scrollbar__pill`} style={scrollbarStyles}></div>
-          </div>
-        }
+  return <div className={classes} {...htmlProps}>
+    <div className={`${globalClass}__scroller-wrapper`}>
+      <div className={`${globalClass}__scroller-content`} ref={contentRef}
+        onScroll={() => measure(true)}>{children}</div>
     </div>
-  )
+    {scrollState.position >= 0 && <div className={`${globalClass}__scrollbar`} aria-hidden="true">
+      <div className={`${globalClass}__scrollbar__pill`} style={{ top: scrollState.top, height: scrollState.height }} />
+    </div>}
+  </div>
 }
-
-export default Scroller

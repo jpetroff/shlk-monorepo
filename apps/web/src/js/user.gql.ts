@@ -17,7 +17,7 @@ class GQLUserQuery {
     })
   }
 
-  public async getLoggedInUser() : Promise<Maybe<AnyObject>> {
+  public async getLoggedInUser(signal?: AbortSignal) : Promise<Maybe<AnyObject>> {
     const query = `
     query {
       getLoggedInUser {
@@ -30,23 +30,23 @@ class GQLUserQuery {
     }
     `
 
-    const response = await this.gqlClient.request(query)
+    const response = await this.gqlClient.request(query, undefined, { signal })
     console.log('[GQL] getLoggedInUser\n', response)
     return response.getLoggedInUser
   }
 
-  public async getPredefinedTimers() : Promise<AnyObject[]> {
+  public async getPredefinedTimers(signal?: AbortSignal) : Promise<AnyObject[]> {
     const query = `
     query {
       getPredefinedTimers
     }
     `
-    const response = await this.gqlClient.request(query)
+    const response = await this.gqlClient.request(query, undefined, { signal })
     console.log('[GQL] getPredefinedTimers\n', response)
     return response.getPredefinedTimers
   }
 
-  public async updateLoggedInUser(args: QIUser) : Promise<User | null> {
+  public async updateLoggedInUser(args: QIUser, signal?: AbortSignal) : Promise<User | null> {
     const query = `
     mutation updateLoggedInUserWithVars(
       $name: String
@@ -68,7 +68,7 @@ class GQLUserQuery {
       }
     }
     `
-    const response = await this.gqlClient.request(query, args)
+    const response = await this.gqlClient.request(query, args, { signal })
     console.log('[GQL] updateLoggedInUser\n', response)
     return response.updateLoggedInUser
   }

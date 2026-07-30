@@ -2,24 +2,22 @@ import styles from './styles-page.module.less'
 
 import * as React from 'react'
 import { useNavigate } from 'react-router'
-import Link from '../components/link'
+import { ActionLink } from '../components/link'
 
 import Header from '../apps/Header'
-import { useRouter } from './page-hooks'
 import Icon, { CaretLeft, IconSize} from '../components/icons'
 import Scroller from '../components/scroller'
 
 const Legal : React.FC = () => {
   const globalClass = styles.legalClass + '_legal'
   const navigate = useNavigate()
-  const router = useRouter()
 
   return (
     <div className={`${globalClass}`}>
       <Header backButton='/' title='Privacy policy' />
       <div className={`${globalClass}__layout`}>
         <div className={`${globalClass}__body`}>
-          <Link onClick={() => navigate(-1)} className={`narrow-body__back-button`}><Icon useIcon={CaretLeft} size={IconSize.LARGE} /></Link>
+          <ActionLink onClick={() => navigate(-1)} className={`narrow-body__back-button`} aria-label="Go back"><Icon useIcon={CaretLeft} size={IconSize.LARGE} /></ActionLink>
           <Scroller className={`${globalClass}__scroller`}>
             <div className={`${globalClass}__legal-content`}>
                 <p>Last updated: April 17, 2023</p>

@@ -8,6 +8,7 @@ import Login from '../pages/login'
 import AppMain from '../pages/app-main'
 import Profile from '../pages/profile'
 import Legal from '../pages/legal'
+import RouteError, { NotFound } from '../pages/route-error'
 
 export default function createRouter() {
   const createRouter = config.target == 'webapp' ? createBrowserRouter : createHashRouter
@@ -36,6 +37,10 @@ export default function createRouter() {
     {
       path: '/privacy-policy',
       element: (<Legal />)
+    },
+    {
+      path: '*',
+      element: <NotFound />
     }
   ]
 
@@ -47,5 +52,5 @@ export default function createRouter() {
     })
   }
 
-  return createRouter(routes)
+  return createRouter(routes.map((route) => ({ ...route, errorElement: <RouteError /> })))
 }

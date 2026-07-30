@@ -56,6 +56,11 @@
 
 
 :local(.wrapperClass)_button {
+	border: 0;
+	font: inherit;
+	line-height: inherit;
+	appearance: none;
+	text-align: left;
 	display: flex;
 	align-items: center;
 	border-radius: @button-border-radius;
@@ -71,6 +76,9 @@
   flex-grow: 0;
 
 	&:focus {
+	&:disabled {
+		opacity: 1;
+	}
 		box-shadow: 0 0 0 0.125rem @pure-blue-90;
 	}
 	&_disabled {

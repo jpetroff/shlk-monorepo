@@ -39,7 +39,7 @@ class GQLShortlinkQuery {
   siteDescription
   `
 
-  public async createShortlink (location: string) : Promise<ShortlinkDocument | null> {
+  public async createShortlink (location: string, signal?: AbortSignal) : Promise<ShortlinkDocument | null> {
     if (validateURL(location) == false) {
       throw new Error(`Not a valid URL: '${location}'`)
     }
@@ -59,13 +59,14 @@ class GQLShortlinkQuery {
     }
     `
 
-    const response = await this.gqlClient.request(query, { location })
+    const response = await this.gqlClient.request(query, { location }, { signal })
     console.log('[GQL] createShortlink\n', response)
     return response.createShortlink
   }
 
   public async createShortlinkDescriptor (
-    { userTag, descriptionTag, location, hash } : { userTag?: string, descriptionTag: string, location: string, hash?: string }
+    { userTag, descriptionTag, location, hash } : { userTag?: string, descriptionTag: string, location: string, hash?: string },
+    signal?: AbortSignal
   ) : Promise<ShortlinkDocument | null> {
     if(!descriptionTag || !location) return null
 
@@ -93,12 +94,12 @@ class GQLShortlinkQuery {
     }
     `
 
-    const response = await this.gqlClient.request(query, { userTag, descriptionTag, location, hash })
+    const response = await this.gqlClient.request(query, { userTag, descriptionTag, location, hash }, { signal })
     console.log('[GQL] createShortlinkDescriptor\n', response)
     return response.createDescriptiveShortlink
   }
 
-  public async getUserShortlinks<T = ShortlinkDocument>( { limit, skip, sort, order, search, isSnooze } : QICommon) : Promise<T[]> {
+  public async getUserShortlinks<T = ShortlinkDocument>( { limit, skip, sort, order, search, isSnooze } : QICommon, signal?: AbortSignal) : Promise<T[]> {
     const query = `
     query getUserShortlinksWithVars (
       $limit: Int
@@ -123,12 +124,12 @@ class GQLShortlinkQuery {
     }
     `
 
-    const response = await this.gqlClient.request(query, { limit, skip, sort, order, search, isSnooze })
+    const response = await this.gqlClient.request(query, { limit, skip, sort, order, search, isSnooze }, { signal })
     console.log('[GQL] getUserShortlinks\n', response)
     return response.getUserShortlinks
   }
 
-  public async createOrUpdateShortlinkTimer(args: QISnoozeArgs) : Promise<ShortlinkDocument | null> {
+  public async createOrUpdateShortlinkTimer(args: QISnoozeArgs, signal?: AbortSignal) : Promise<ShortlinkDocument | null> {
     const query = `
     mutation createOrUpdateShortlinkTimerWithVars(
       $location: String
@@ -165,12 +166,12 @@ class GQLShortlinkQuery {
     }
     `
 
-    const response = await this.gqlClient.request(query, args)
+    const response = await this.gqlClient.request(query, args, { signal })
     console.log('[GQL] createOrUpdateShortlinkTimer\n', response)
     return response.createOrUpdateShortlinkTimer
   }
 
-  public async deleteShortlinkSnoozeTimer(ids: string[]) : Promise<ShortlinkDocument[]> {
+  public async deleteShortlinkSnoozeTimer(ids: string[], signal?: AbortSignal) : Promise<ShortlinkDocument[]> {
     const query = `
     mutation deleteShortlinkSnoozeTimerWithVars(
       $ids: [String]
@@ -189,12 +190,12 @@ class GQLShortlinkQuery {
     }
     `
 
-    const response = await this.gqlClient.request(query, {ids})
+    const response = await this.gqlClient.request(query, {ids}, { signal })
     console.log('[GQL] deleteShortlinkSnoozeTimer\n', response)
     return response.deleteShortlinkSnoozeTimer
   }
 
-  public async deleteShortlink(id: string) : Promise<ShortlinkDocument | null> {
+  public async deleteShortlink(id: string, signal?: AbortSignal) : Promise<ShortlinkDocument | null> {
     const query = `
     mutation deleteShortlink(
       $id: String!
@@ -213,12 +214,12 @@ class GQLShortlinkQuery {
     }
     `
 
-    const response = await this.gqlClient.request(query, {id})
+    const response = await this.gqlClient.request(query, {id}, { signal })
     console.log('[GQL] deleteShortlink\n', response)
     return response.deleteShortlink
   }
 
-  public async updateShortlink(id: string, shortlink: Partial<ShortlinkDocument>) : Promise<ShortlinkDocument> {
+  public async updateShortlink(id: string, shortlink: Partial<ShortlinkDocument>, signal?: AbortSignal) : Promise<ShortlinkDocument> {
     const query = `
     mutation updateShortlinkWithVars(
       $id: String!
@@ -233,7 +234,7 @@ class GQLShortlinkQuery {
     }
     `
 
-    const response = await this.gqlClient.request(query, {id, shortlink})
+    const response = await this.gqlClient.request(query, {id, shortlink}, { signal })
     console.log('[GQL] updateShortlink\n', response)
     return response.updateShortlink
   }

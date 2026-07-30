@@ -1,4 +1,3 @@
-import * as _ from 'underscore'
 import axios, { AxiosRequestConfig, AxiosResponse, AxiosInstance } from 'axios'
 import GracefulError from './extended-error'
 
@@ -31,13 +30,14 @@ class GQLRequest {
     throw GracefulError.processGQLResponse(response.data)
   }
 
-  async request(query: string, variables?: AnyObject, _config?: AnyObject) : Promise<any> {
-    const config = _.defaults({
-        data: {
-          query,
-          variables
-        }
-      }, _config)
+  async request(query: string, variables?: AnyObject, requestConfig?: AxiosRequestConfig) : Promise<any> {
+    const config: AxiosRequestConfig = {
+      ...requestConfig,
+      data: {
+        query,
+        variables
+      }
+    }
     const result = await this.axiosInstance.request(config)
     return result
   }

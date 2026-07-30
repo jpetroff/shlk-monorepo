@@ -1,5 +1,4 @@
 import * as React from 'react'
-import * as _ from 'underscore'
 import config from './config'
 
 import browserApi from './browser.api'
@@ -20,16 +19,12 @@ declare type ExtensionContext = {
 export type AppContextT = {
   extension?: Maybe<ExtensionContext>,
   user?: Maybe<LoginContext>,
-  screenSize: [number, number],
-  requestUpdate: () => void
+  requestUpdate: () => Promise<void>
 }
 
 export type AppContextState = Omit<AppContextT, 'requestUpdate'>
 
-const AppContext = React.createContext<AppContextT>( {
-  screenSize: [window.innerWidth, window.innerHeight],
-  requestUpdate: () => {}
-} )
+const AppContext = React.createContext<AppContextT | undefined>(undefined)
 
 type Props = {
   initValue: Omit<AppContextT, 'requestUpdate'>
@@ -43,28 +38,17 @@ const AppContextProvider : React.FC<React.PropsWithChildren<Props>> = (
 ) => {
   const [ contextState, setContextState ] = React.useState(initValue)
 
-  async function requestUpdate() {
-    const contextState = await getInitAppContext()
-    setContextState(contextState)
-  }
-
-  function resizeHandler() {
-    const newContext = _.extend({ screenSize: [window.innerWidth, window.innerHeight] }, contextState)
-    setContextState(newContext)
-  }
-
-  React.useEffect( () => {
-    window.addEventListener('onresize', resizeHandler)
-
-    return () => window.removeEventListener('onresize', resizeHandler)
-  } )
+  const requestUpdate = React.useCallback(async () => {
+    const nextContextState = await getInitAppContext()
+    setContextState(nextContextState)
+  }, [])
 
   const value : AppContextT = React.useMemo( () => {
     return {
       ...contextState,
       requestUpdate
     }
-  }, [contextState])
+  }, [contextState, requestUpdate])
 
   return (
     <AppContext.Provider value={value}>
@@ -76,10 +60,14 @@ const AppContextProvider : React.FC<React.PropsWithChildren<Props>> = (
 export default AppContext
 export { AppContextProvider }
 
+export function useAppContext(): AppContextT {
+  const context = React.useContext(AppContext)
+  if (!context) throw new Error('useAppContext must be used inside AppContextProvider')
+  return context
+}
 export async function getInitAppContext(): Promise<AppContextState> {
-  const result : AppContextState = {
-    screenSize: [window.innerWidth, window.innerHeight]
-  }
+
+  const result : AppContextState = {}
 
   // getting active tab
   if(config.target == 'extension' && browserApi.isInit) {

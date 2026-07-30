@@ -10,12 +10,12 @@ const Footer : React.FC<{}> = () => {
     <div className={`${globalClass}__wrapper`}>
       <div className={`${globalClass}`} >
         <div className={`${globalClass}__item`}>
-          Personal project by <Link href="https://portfolio.designpr.one">designpr.one</Link>
-          · PP Mori typeface <Heart className={`${globalClass}__with-love-icon`} />
+          Personal project by <Link href="https://portfolio.designpr.one" newTab>designpr.one</Link>
+          · PP Mori typeface <Heart className={`${globalClass}__with-love-icon`} aria-hidden="true" />
         </div>
         <div className={`${globalClass}__item`}>
           <span>Valmistettu Suomessa</span>
-          <Flag className={`${globalClass}__flag-icon`} />
+          <Flag className={`${globalClass}__flag-icon`} aria-hidden="true" />
         </div>
         
         {/* <div className={`${globalClass}__item`}>

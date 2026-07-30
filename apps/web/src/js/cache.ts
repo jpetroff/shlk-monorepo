@@ -39,7 +39,7 @@ class ShortlinkCache {
     const _now = new Date()
     this.dateThreshold = new Date(_now.setMonth(_now.getMonth() - 1))
     this.storage = []
-    _.defer(this.purgeOutdatedShortlinks.bind(this))
+    queueMicrotask(() => void this.purgeOutdatedShortlinks())
   }
 
   public async setStorage() {

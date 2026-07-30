@@ -7,6 +7,7 @@ import { getInitAppContext, AppContextProvider } from './app.context'
 import createRouter from './routes'
 import cache, { CacheMode } from './cache'
 
+import { StrictMode } from 'react'
 async function main() {
   document.documentElement.classList.add(config.target)
   const appContext = await getInitAppContext()
@@ -16,9 +17,11 @@ async function main() {
   const container = document.getElementById('app')
   if (!container) throw new Error('Application root element was not found')
   createRoot(container).render(
-    <AppContextProvider initValue={appContext}>
-      <RouterProvider router={createRouter()} />
-    </AppContextProvider>
+    <StrictMode>
+      <AppContextProvider initValue={appContext}>
+        <RouterProvider router={createRouter()} />
+      </AppContextProvider>
+    </StrictMode>
   )
 }
 

@@ -27,34 +27,34 @@ export default {
           base.startOf('day') <= itemDate &&
           itemDate <= base.endOf('day')
         )
-          result.push( _.extend(item, {group: 'Today'}) )
+          result.push({ ...item, group: 'Today' })
 
         else if (
           base.add(1, 'day').startOf('day') <= itemDate &&
           itemDate <= base.add(1, 'day').endOf('day')
         )
-          result.push( _.extend(item, {group: 'Tomorrow'}) )
+          result.push({ ...item, group: 'Tomorrow' })
 
         else if (
           base.subtract(1, 'day').startOf('day') <= itemDate &&
           itemDate <= base.subtract(1, 'day').endOf('day')
         )
-          result.push( _.extend(item, {group: 'Yesterday'}) )
+          result.push({ ...item, group: 'Yesterday' })
 
         else if (
           itemDate > base &&
           itemDate <= base.endOf('week')
         )
-          result.push( _.extend(item, { group: `This ${itemDate.format('dddd')}` }) )
+          result.push({ ...item, group: `This ${itemDate.format('dddd')}` })
 
         else if (
           base.startOf('year') <= itemDate && 
           itemDate <= base.endOf('year')
         )
-          result.push( _.extend(item, {group: `${itemDate.format('ddd, D MMM')}`}) )
+          result.push({ ...item, group: itemDate.format('ddd, D MMM') })
 
         else 
-          result.push( _.extend(item, {group: `${itemDate.format('ddd, D MMM YYYY')}`}) )
+          result.push({ ...item, group: itemDate.format('ddd, D MMM YYYY') })
 
       } catch { return }
     })

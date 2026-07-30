@@ -60,8 +60,8 @@ const Icon : React.FC<Props> = function( {
 	const IconNode = useIcon
   const propClass = className || ''
 	return (
-		<div className={`${styles.wrapperClass} ${globalClass} ${globalClass}_size-${size} ${propClass}`}>
-			<IconNode className={`${globalClass}__node`} />
+		<div className={`${styles.wrapperClass} ${globalClass} ${globalClass}_size-${size} ${propClass}`} aria-hidden="true">
+			<IconNode className={`${globalClass}__node`} focusable="false" />
 		</div>
 	)
 }

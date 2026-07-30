@@ -1,103 +1,41 @@
 import styles from './styles-snackbar.module.less'
 import * as React from 'react'
-import * as _ from 'underscore'
-import Button, { ButtonSize, ButtonType } from '../button'
-import { Cross_16, Enter } from '../icons'
+import { Cross_16 } from '../icons'
 import { CSSTransition } from 'react-transition-group'
-import Link from '../link'
 import classNames from 'classnames'
 
-export enum SnackbarType {
-  MESSAGE = 'message',
-  ERROR = 'error',
-  WARNING = 'warning'
-}
+export enum SnackbarType { MESSAGE = 'message', ERROR = 'error', WARNING = 'warning' }
+type Props = { type?: SnackbarType, canDismiss?: boolean, message: string | React.ReactElement,
+  action?: string, onAction?: () => void, onDismiss?: () => void, timer?: number, className?: string }
 
-type Props = {
-  type?: SnackbarType
-  canDismiss?: boolean
-  message: string | React.ReactElement
-  action?: string
-  onAction?: () => void
-  onDismiss?: () => void
-  timer?: number,
-  className?: string
-} 
-
-const Snackbar : React.FC<Props> = (
-  {
-    type = SnackbarType.MESSAGE,
-    canDismiss = false,
-    message = '',
-    action,
-    onAction,
-    onDismiss,
-    timer,
-    className
-  } : Props
-) => {
-  const [state, setState] = React.useState(true)
-
-  const globalClass = styles.wrapperClass+'_snackbar'
-  const snackBarClasses = classNames({
-    [`${globalClass}`]: true,
-    [`${globalClass}_has-action`]: !!action,
-    [`${className}`]: !!className
-  })
+export default function Snackbar({
+  type = SnackbarType.MESSAGE, canDismiss = false, message, action, onAction, onDismiss, timer, className
+}: Props) {
+  const [visible, setVisible] = React.useState(true)
   const snackbarNode = React.useRef<HTMLDivElement>(null)
+  const timeout = Number.parseInt(styles.transitionDuration)
+  const globalClass = styles.wrapperClass + '_snackbar'
+  const classes = classNames({ [globalClass]: true, [`${globalClass}_has-action`]: !!action, [`${className}`]: !!className })
 
-  const timeout = parseInt(styles.transitionDuration)
+  React.useEffect(() => {
+    if (!timer || !visible) return
+    const timerId = window.setTimeout(() => setVisible(false), timer)
+    return () => window.clearTimeout(timerId)
+  }, [timer, visible])
 
-  const timerDivStyle : React.CSSProperties = {
-    animationDuration: timer ? `${timer}ms` : undefined,
-  }
-
-  const handleDismiss = () => {
-    setState(false)
-    if (_.isFunction(onDismiss)) _.delay(onDismiss, timeout)
-  }
-
-  if(timer) {
-    React.useEffect( () => {
-      const timerDelay = setTimeout(handleDismiss, timer)
-      return () => {
-        clearTimeout(timerDelay)
-      }
-    })
-    
-  }
-
-  return (
-  <CSSTransition 
-    appear={true}
-    in={state}
-    nodeRef={snackbarNode}
-    timeout={timeout}
-    classNames={`${globalClass}__transition`}
-  >
-    <div ref={snackbarNode} className={`${snackBarClasses}`} >
+  return <CSSTransition appear in={visible} nodeRef={snackbarNode} timeout={timeout}
+    classNames={`${globalClass}__transition`} onExited={() => onDismiss?.()}>
+    <div ref={snackbarNode} className={classes} role={type === SnackbarType.ERROR ? 'alert' : 'status'}
+      aria-live={type === SnackbarType.ERROR ? 'assertive' : 'polite'}>
       <div className={`${globalClass}__content-wrapper`}>
         <div className={`${globalClass}__message`}>{message}</div>
-        {canDismiss && 
-          <Cross_16 
-            className={`${globalClass}__dismiss`} 
-            onClick={handleDismiss}
-            />
-        }
+        {canDismiss && <button type="button" className={`${globalClass}__dismiss`}
+          aria-label="Dismiss notification" onClick={() => setVisible(false)}>
+          <Cross_16 aria-hidden="true" />
+        </button>}
       </div>
-      {action &&
-        <Link 
-          className={`${globalClass}__snackbar-action`}
-          label={action}
-          onClick={onAction}
-          />
-      }
-      {timer && 
-        <div className={`${globalClass}__timer-progress`} style={ timerDivStyle } />
-      }
+      {action && <button type="button" className={`${globalClass}__snackbar-action`} onClick={onAction}>{action}</button>}
+      {timer && <div className={`${globalClass}__timer-progress`} style={{ animationDuration: `${timer}ms` }} />}
     </div>
   </CSSTransition>
-  )
 }
-
-export default Snackbar

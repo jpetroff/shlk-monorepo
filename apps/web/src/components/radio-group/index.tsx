@@ -3,50 +3,27 @@ import * as React from 'react'
 import Icon, { IconSize, ReactIcon } from '../icons'
 import classNames from 'classnames'
 
-type Props = {
-  items: Array<{label?: string, key: string, icon?: ReactIcon}>
-  onChange: (key: string) => void
-  value: string
-  fullWidth?: boolean
-}
+type RadioItem = { label?: string, ariaLabel?: string, key: string, icon?: ReactIcon }
+type Props = { items: RadioItem[], onChange: (key: string) => void, value: string, label: string, fullWidth?: boolean }
 
-const RadioGroup : React.FC<Props> = (
-  {
-    items, 
-    onChange,
-    value,
-    fullWidth = false
-  } : Props
-) => {
+export default function RadioGroup({ items, onChange, value, label, fullWidth = false }: Props) {
+  const name = React.useId()
   const globalClass = `${styles.wrapperClass}_radio-group`
-  const radioGroupClasses = classNames({
-    [`${globalClass}`]: true,
-    [`${globalClass}_full-width`]: fullWidth
-  })
+  const classes = classNames({ [globalClass]: true, [`${globalClass}_full-width`]: fullWidth })
 
-  function handleClick(_event: React.MouseEvent, key: string) {
-    onChange(key)
-  }
-
-  // const styleObj = fullWidth ? { width: `${100%}`}
-
-  return (
-    <div className={`${radioGroupClasses}`}>
-      {items.map( (item, index) => {
-        const activeClass = item.key == value ? `${globalClass}__radio-button_active` : ''
-        return (
-          <div 
-            className={`${globalClass}__radio-button ${activeClass}`}
-            onClick={(event) => handleClick(event, item.key)}
-            key={item.key}
-          >
-            {item.icon && <Icon useIcon={item.icon} size={IconSize.SMALL} />}
-            {item.label}
-          </div>
-        )
-      } )}
-    </div>
-  )
+  return <fieldset className={classes}>
+    <legend className={`${globalClass}__legend`}>{label}</legend>
+    {items.map((item) => {
+      const itemLabel = item.ariaLabel ?? item.label
+      return <label className={classNames(`${globalClass}__radio-button`, {
+        [`${globalClass}__radio-button_active`]: item.key === value
+      })} key={item.key} aria-label={itemLabel}>
+        <input className={`${globalClass}__native-radio`} type="radio" name={name}
+          value={item.key} checked={item.key === value} aria-label={itemLabel}
+          onChange={() => onChange(item.key)} />
+        {item.icon && <Icon useIcon={item.icon} size={IconSize.SMALL} />}
+        {item.label}
+      </label>
+    })}
+  </fieldset>
 }
-
-export default RadioGroup

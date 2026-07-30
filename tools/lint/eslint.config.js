@@ -1,6 +1,8 @@
 import js from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import globals from 'globals'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default tseslint.config(
   {
@@ -18,6 +20,14 @@ export default tseslint.config(
     files: ['../../apps/web/src/**/*.{ts,tsx}', '../../apps/web/vite.config.ts'],
     languageOptions: {
       globals: { ...globals.browser, ...globals.webextensions }
+    },
+    plugins: {
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh
+    },
+    rules: {
+      ...reactHooks.configs.flat['recommended-latest'].rules,
+      ...reactRefresh.configs.vite.rules
     }
   },
   {

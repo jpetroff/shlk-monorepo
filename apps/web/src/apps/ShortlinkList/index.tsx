@@ -1,501 +1,257 @@
 import styles from './styles-shortlink-list.module.less'
 import * as React from 'react'
-import * as _ from 'underscore'
 import Input from '../../components/input'
 import ShortlinkListItem from '../../components/shortlink-list-item'
 import shortlinkQueries from '../../js/shortlink.gql'
 import classNames from 'classnames'
 import dateTimeTools, { DateGrouped } from '../../js/datetime.tools'
 import RadioGroup from '../../components/radio-group'
-import { NavigateFunction } from 'react-router'
-import DropdownMenu, { DropdownPosition } from '../../components/dropdown-menu'
+import DropdownMenu from '../../components/dropdown-menu'
 import MenuItem from '../../components/menu-item'
 import Scroller from '../../components/scroller'
 import clipboardTools from '../../js/clipboard.tools'
 import linkTools from '../../js/link.tools'
 import { CompactIcon, FullIcon, Search } from '../../components/icons'
 import UrlEdit from '../UrlEdit'
-import Snackbar from '../../components/snackbar'
-import AppContext from '../../js/app.context'
+import Snackbar, { SnackbarType } from '../../components/snackbar'
+import { useAppContext } from '../../js/app.context'
 import { getCookie, setCookie } from '../../js/utils'
+import { isAbortError, useAbortControllers, useDebouncedValue } from '../../js/react-hooks'
+import { useLocation, useNavigate } from 'react-router'
 
-type ShortlinkDisplayListItem = (DateGrouped<ShortlinkDocument> & {isSubheader?: false, timestamp?: number, originalIndex: number}) | {isSubheader: true, group: string, originalIndex: number}
+export enum ShortlinkListSubsection { all = 'created', snoozed = 'snoozed' }
+export enum ShortlinkListContentDisplay { compact = 'compact', full = 'full' }
+type LoadMode = 'append' | 'replace' | 'none'
+type GroupedItem = DateGrouped<ShortlinkDocument> & { isSubheader?: false, timestamp: number }
+type GroupedHeader = { isSubheader: true, group: string, key: string }
+export type ShortlinkDisplayListItem = GroupedItem | GroupedHeader
 
-enum LoadMode {
-  append = 'append',
-  replace = 'replace',
-  none = 'none'
+export function subsectionFromPath(pathname: string): ShortlinkListSubsection {
+  return pathname === '/app/snoozed' ? ShortlinkListSubsection.snoozed : ShortlinkListSubsection.all
 }
 
-export enum ShortlinkListSubsection {
-  all = 'created',
-  snoozed = 'snoozed'
+export function groupShortlinks(shortlinks: ShortlinkDocument[], subsection: ShortlinkListSubsection): ShortlinkDisplayListItem[] {
+  const dateGroupKey = subsection === ShortlinkListSubsection.snoozed ? ['snooze', 'awake'] : ['createdAt']
+  const grouped = dateTimeTools.groupDatedItems(shortlinks, dateGroupKey)
+  const rows: ShortlinkDisplayListItem[] = []
+  grouped.forEach((item, index) => {
+    if (index === 0 || grouped[index - 1].group !== item.group) {
+      rows.push({ isSubheader: true, group: item.group, key: `group-${item.group}` })
+    }
+    rows.push({ ...item, timestamp: Number(item.createdAt ?? item.updatedAt ?? 0) })
+  })
+  return rows
 }
 
-export enum ShortlinkListContentDisplay {
-  compact = 'compact',
-  full = 'full'
-}
-
-type Props = {
-  limit?: number,
-  navigate: NavigateFunction,
-  router: PageRouterProps,
-  context: React.ContextType<typeof AppContext>
-}
-
-type State = {
-  shortlinks: ShortlinkDocument[],
-  groupedShortlinks: ShortlinkDisplayListItem[]
+type ListState = {
+  shortlinks: ShortlinkDocument[]
   searchQuery: string
-  pointer: number
-  limit: number
   contentDisplay: ShortlinkListContentDisplay
-  staleResults: boolean
-  isLoading: LoadMode
-  contextMenu: {
-    key: number
-    top: number
-    left: number
-    show: boolean
-  }
-  selected: {
-    shortlink: ShortlinkDocument | null,
-    loading: boolean,
-    successState: string | null
-    errorState: string | null
+  loadMode: LoadMode
+  hasMore: boolean
+  error: string | null
+}
+type ListAction =
+  | { type: 'search', value: string }
+  | { type: 'loading', mode: Exclude<LoadMode, 'none'> }
+  | { type: 'loaded', mode: Exclude<LoadMode, 'none'>, items: ShortlinkDocument[], limit: number }
+  | { type: 'failed', message: string }
+  | { type: 'clear-error' }
+  | { type: 'display', value: ShortlinkListContentDisplay }
+  | { type: 'remove', id: string }
+  | { type: 'update', item: ShortlinkDocument }
+
+export function shortlinkListReducer(state: ListState, action: ListAction): ListState {
+  switch (action.type) {
+    case 'search': return { ...state, searchQuery: action.value }
+    case 'loading': return { ...state, loadMode: action.mode, error: null }
+    case 'loaded': return {
+      ...state,
+      shortlinks: action.mode === 'replace' ? action.items : [...state.shortlinks, ...action.items],
+      loadMode: 'none',
+      hasMore: action.items.length === action.limit,
+      error: null
+    }
+    case 'failed': return { ...state, loadMode: 'none', error: action.message }
+    case 'clear-error': return { ...state, error: null }
+    case 'display': return { ...state, contentDisplay: action.value }
+    case 'remove': return { ...state, shortlinks: state.shortlinks.filter((item) => item._id !== action.id) }
+    case 'update': return { ...state, shortlinks: state.shortlinks.map((item) => item._id === action.item._id ? action.item : item) }
   }
 }
 
-export default class ShortlinkList extends React.Component<Props, State> {
-  private contextMenuRef : React.RefObject<HTMLDivElement | null>
+function initialState(): ListState {
+  const storedDisplay = getCookie('content-display') as ShortlinkListContentDisplay
+  return { shortlinks: [], searchQuery: '',
+    contentDisplay: Object.values(ShortlinkListContentDisplay).includes(storedDisplay) ? storedDisplay : ShortlinkListContentDisplay.compact,
+    loadMode: 'none', hasMore: true, error: null }
+}
 
-  constructor(props: Props) {
-    super(props)
-    const contentDisplay : ShortlinkListContentDisplay = getCookie('content-display') as ShortlinkListContentDisplay || ShortlinkListContentDisplay.compact
+export function useShortlinkList(limit: number, subsection: ShortlinkListSubsection) {
+  const [state, dispatch] = React.useReducer(shortlinkListReducer, undefined, initialState)
+  const debouncedSearch = useDebouncedValue(state.searchQuery, 150)
+  const requestSequence = React.useRef(0)
+  const { nextController, abortController } = useAbortControllers()
+  const requestInFlight = React.useRef(false)
 
-    this.state = {
-      shortlinks: [],
-      groupedShortlinks: [],
-      searchQuery: '',
-      pointer: 0,
-      limit: props.limit || 30,
-      contentDisplay,
-      staleResults: false,
-      isLoading: LoadMode.none,
-      contextMenu: {
-        key: -1,
-        top: -99999,
-        left: -999999,
-        show: false
-      },
-      selected: {
-        shortlink: null,
-        loading: false,
-        errorState: null,
-        successState: null
-      }
-    }
-    this.contextMenuRef = React.createRef<HTMLDivElement | null>()
-    _.bindAll(this, ..._.functions(this))
-  }
-
-  onSearch(value: string, event: React.SyntheticEvent<any>, isClear : boolean) {
-    this.loadShortlinks(LoadMode.replace)
-  }
-
-  onSearchQueryChange(value: string, event: React.SyntheticEvent<any>, isClear: boolean) {
-    this.setState({ searchQuery: value, staleResults: true })
-  }
-
-  componentDidMount(): void {
-    this.loadShortlinks(LoadMode.replace)
-  }
-
-  componentDidUpdate(prevProps: Readonly<Props>, prevState: Readonly<State>, snapshot?: any): void {
-    if(this.getSubsection() != this.getSubsection(prevProps.router.location.pathname)) 
-      this.loadShortlinks(LoadMode.replace)
-  }
-
-  private getSubsection(_pathname?: string) : ShortlinkListSubsection {
-    const pathname = _pathname ? _pathname : this.props.router.location.pathname
-    if(pathname == '/app')
-      return ShortlinkListSubsection.all
-
-    if(pathname == '/app/snoozed')
-      return ShortlinkListSubsection.snoozed
-
-    return ShortlinkListSubsection.all
-  }
-
-  async loadShortlinks(load: LoadMode) {
-    let params : AnyObject
-
-    this.setState({
-      isLoading: load,
-      staleResults: load == LoadMode.replace ? true : false
+  const load = React.useCallback(async (mode: Exclude<LoadMode, 'none'>, skip: number) => {
+    const sequence = ++requestSequence.current
+    const controller = nextController('list')
+    requestInFlight.current = true
+    dispatch({ type: 'loading', mode })
+    const params: QICommon = { search: debouncedSearch || undefined, skip, limit }
+    if (subsection === ShortlinkListSubsection.snoozed) Object.assign(params, {
+      isSnooze: true, sort: 'snooze.awake', order: '1'
     })
-
-    if(this.getSubsection() == ShortlinkListSubsection.snoozed) {
-      params = { 
-        search: this.state.searchQuery || undefined,
-        skip: load == LoadMode.replace ? 0 : this.state.pointer,
-        limit: this.state.limit,
-        isSnooze: true,
-        sort: 'snooze.awake',
-        order: '1'
-      }
-    } else {
-      params = { 
-        search: this.state.searchQuery || undefined,
-        skip: load == LoadMode.replace ? 0 : this.state.pointer,
-        limit: this.state.limit
-      }
-    }
-
-    const result = await shortlinkQueries.getUserShortlinks(params)
-    const newShortlinks = load == LoadMode.replace ? result : [...this.state.shortlinks, ...result]
-    const groupedResult = this.groupShortlinks(newShortlinks as ShortlinkDocument[])
-    
-    console.log(load, result)
-    this.setState({
-      pointer: load == LoadMode.replace ? result.length : this.state.shortlinks.length + result.length,
-      shortlinks: newShortlinks,
-      groupedShortlinks: groupedResult,
-      staleResults: false
-    })
-
-    _.delay(() => {
-      this.setState({
-        isLoading: LoadMode.none
-      })
-    }, 250)
-  }
-
-  private groupShortlinks(shortlinks: ShortlinkDocument[]) : ShortlinkDisplayListItem[] {
-    const dateGroupKey = ( this.getSubsection() == ShortlinkListSubsection.snoozed ) ? ['snooze', 'awake'] : ['createdAt']
-    const _enrichedLabelGroups = dateTimeTools.groupDatedItems(shortlinks, dateGroupKey)
-
-    const groupedShortlinks : Array<ShortlinkDisplayListItem> = []
-    _.each(_enrichedLabelGroups, (item, index, array) => {
-      if (index == 0 || array[index - 1].group != item.group) {
-        groupedShortlinks.push({isSubheader: true, group: item.group, originalIndex: -1})
-      }
-      groupedShortlinks.push( _.extend({timestamp: item.createdAt || item.updatedAt || null, originalIndex: index}, item) )
-    })
-    return groupedShortlinks
-  }
-
-  private removeCachedShortlink(id: string) {
-    const index = _.findIndex(this.state.shortlinks, {_id: id})
-    console.log(id, index)
-    const updatedShortlinks = this.state.shortlinks
-    updatedShortlinks.splice(index, 1)
-    const groupedShortlinks = this.groupShortlinks(updatedShortlinks)
-
-    this.setState({
-      pointer: this.state.pointer - 1,
-      shortlinks: updatedShortlinks,
-      groupedShortlinks: groupedShortlinks,
-      staleResults: false
-    })
-  }
-
-  private updateCachedShortlink(shortlink: ShortlinkDocument) {
-    const index = _.findIndex(this.state.shortlinks, {_id: shortlink._id})
-    console.log('Updating shortlink', index, this.state.shortlinks[index])
-    const updatedShortlinks = this.state.shortlinks
-    updatedShortlinks[index] = shortlink
-    const groupedShortlinks = this.groupShortlinks(updatedShortlinks)
-
-    this.setState({
-      shortlinks: updatedShortlinks,
-      groupedShortlinks: groupedShortlinks,
-      staleResults: false
-    })
-  }
-
-  handleInternalNavigate(key: string) {
-    if(key == ShortlinkListSubsection.all)
-      this.props.navigate('/app')
-
-    if(key == ShortlinkListSubsection.snoozed)
-      this.props.navigate('/app/snoozed')
-  }
-
-  handleContentDisplayChange(key: string) {
-    this.setState({
-      contentDisplay: key as ShortlinkListContentDisplay
-    })
-    setCookie('content-display', key, 180)
-  }
-
-  handleContextClick(key: number, element: HTMLElement) {
-    _.defer(() => {
-      const top = element.offsetTop + element.offsetHeight
-      const left = element.offsetLeft + element.offsetWidth
-      this.setState({
-        contextMenu: {
-          show: true,
-          top: -top,
-          left: -left,
-          key: key,
-        }
-      })
-    })
-  }
-
-  handleContextPortal(isAppearing: boolean) {
-    const contextMenuParams = this.contextMenuRef.current?.getClientRects()
-    this.setState({
-      contextMenu: {
-        show: true,
-        top: Math.abs(this.state.contextMenu.top) - (contextMenuParams?.[0]?.height ?? 0),
-        left: Math.abs(this.state.contextMenu.left) - (contextMenuParams?.[0]?.width ?? 0),
-        key: this.state.contextMenu.key,
-      }
-    })
-  }
-
-  async handleRemoveSnoozeTimer() {
-    const id = this.state.shortlinks[this.state.contextMenu.key]?._id
-    if (!id) return
-    const result = await shortlinkQueries.deleteShortlinkSnoozeTimer([id])
-    if(result && result.length > 0) {
-      _.each(result, (item) => {
-        this.removeCachedShortlink(item._id)
-      })
-    }
-    _.defer(this.resetContextMenu)
-  }
-
-  async handleDeleteShortlink() {
-    const id = this.state.shortlinks[this.state.contextMenu.key]?._id
-    if (!id) return
-    const result = await shortlinkQueries.deleteShortlink(id)
-    console.log(result)
-    if(result && result._id) {
-      this.removeCachedShortlink(result._id)
-    }
-    _.defer(this.resetContextMenu)
-  }
-
-  private resetContextMenu() {
-    this.setState({
-      contextMenu: {
-        key: -1,
-        top: -99999,
-        left: -999999,
-        show: false
-      }
-    })
-  }
-
-  handleCopyClick(key: number) {
-    if(!this.state.shortlinks[key]) return
-
-    const hash = this.state.shortlinks[key].hash
-    const descriptor = this.state.shortlinks[key].descriptor
-
-    const shortlink = this.state.shortlinks[key].descriptor ? 
-                      linkTools.generateDescriptiveShortlink(this.state.shortlinks[key].descriptor) :
-                      linkTools.generateShortlinkFromHash(this.state.shortlinks[key].hash)
-
-    clipboardTools.copy(shortlink)
-  }
-
-  handleScroll(scrollTop: number, scrollHeight: number, clientHeight: number, direction = 0) {
-    const isThreshold : boolean = (scrollTop + clientHeight) > (scrollHeight * 0.96)
-    
-    if(
-      isThreshold && 
-      this.state.isLoading == LoadMode.none && 
-      direction > 0
-    ) { 
-      console.log('scroll load', scrollTop)
-      this.loadShortlinks(LoadMode.append)
-    }
-  }
-
-  async handleUrlChange(shortlink: ShortlinkDocument) { 
-    if(!shortlink) {
-      this.setState({
-        selected: _.defaults({
-          errorState: 'Couldn’t save this shortlink'
-        }, this.state.selected) 
-      })
-      console.error('No shortlink passed to onChange method from module UrlEdit', shortlink)
-    }
-
-    this.setState({ selected: _.defaults({loading: true}, this.state.selected)})
     try {
-      console.log('sending ',shortlink)
-      const result = await shortlinkQueries.updateShortlink(shortlink._id, shortlink)
-      console.log(result)
-      this.updateCachedShortlink(result)
-      this.setState({
-        selected: {
-          shortlink: null,
-          loading: false,
-          errorState: null,
-          successState: 'Shortlink updated'
-        }
-      })
-    } catch(error: unknown) {
-      console.error(error)
-      this.setState({
-        selected: _.defaults({
-          loading: false,
-          errorState: error instanceof Error ? error.message : 'Something went wrong'
-        }, this.state.selected)
-      })
+      const items = await shortlinkQueries.getUserShortlinks<ShortlinkDocument>(params, controller.signal)
+      if (sequence === requestSequence.current) dispatch({ type: 'loaded', mode, items, limit })
+    } catch (error) {
+      if (!isAbortError(error) && sequence === requestSequence.current) {
+        dispatch({ type: 'failed', message: error instanceof Error ? error.message : 'Could not load your shortlinks' })
+      }
+    } finally {
+      if (sequence === requestSequence.current) requestInFlight.current = false
     }
-      
+  }, [debouncedSearch, limit, nextController, subsection])
+  React.useEffect(() => {
+    void load('replace', 0)
+    return () => {
+      ++requestSequence.current
+      requestInFlight.current = false
+      abortController('list')
+    }
+  }, [abortController, load])
+
+  const append = React.useCallback(() => {
+    if (requestInFlight.current || state.loadMode !== 'none' || !state.hasMore) return
+    void load('append', state.shortlinks.length)
+  }, [load, state.hasMore, state.loadMode, state.shortlinks.length])
+
+  return { state, dispatch, append, retry: () => void load('replace', 0), nextController }
+}
+
+type Props = { limit?: number }
+type MenuState = { id: string | null, top: number, left: number, trigger: HTMLElement | null }
+const closedMenu: MenuState = { id: null, top: -99999, left: -99999, trigger: null }
+
+export default function ShortlinkList({ limit = 30 }: Props) {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const appContext = useAppContext()
+  const subsection = subsectionFromPath(location.pathname)
+  const { state, dispatch, append, retry, nextController } = useShortlinkList(limit, subsection)
+  const grouped = React.useMemo(() => groupShortlinks(state.shortlinks, subsection), [state.shortlinks, subsection])
+  const menuRef = React.useRef<HTMLDivElement>(null)
+  const [menu, setMenu] = React.useState<MenuState>(closedMenu)
+  const [selected, setSelected] = React.useState<ShortlinkDocument | null>(null)
+  const [mutationLoading, setMutationLoading] = React.useState(false)
+  const [notice, setNotice] = React.useState<{ type: 'error' | 'success', message: string } | null>(null)
+  const globalClass = `${styles.wrapperClass}_shortlink-list-app`
+  const listClasses = classNames(globalClass, { [`${globalClass}_loading`]: state.loadMode === 'replace' })
+
+  const closeMenu = React.useCallback(() => {
+    const trigger = menu.trigger
+    setMenu(closedMenu)
+    window.requestAnimationFrame(() => trigger?.focus())
+  }, [menu.trigger])
+
+  function openMenu(id: string, element: HTMLElement) {
+    const top = element.offsetTop + element.offsetHeight
+    const left = element.offsetLeft + element.offsetWidth
+    setMenu({ id, top: -top, left: -left, trigger: element })
   }
 
-  handleSelectShortlink() {
-    this.resetContextMenu()
-    if(!this.state.shortlinks[this.state.contextMenu.key]) return
-
-    this.setState({
-      selected: _.defaults({
-        shortlink: _.omit(this.state.shortlinks[this.state.contextMenu.key], 'group')
-      }, this.state.selected)
-    })
+  function positionMenu() {
+    const rect = menuRef.current?.getBoundingClientRect()
+    if (!rect) return
+    setMenu((current) => ({ ...current, top: Math.abs(current.top) - rect.height, left: Math.abs(current.left) - rect.width }))
   }
 
-  _clearSelected() {
-    this.setState({
-      selected: _.defaults({
-        shortlink: null
-      }, this.state.selected)
-    })
+  async function deleteSelected(removeSnooze: boolean) {
+    const id = menu.id
+    if (!id) return
+    const controller = nextController('mutation')
+    setMutationLoading(true)
+    try {
+      if (removeSnooze) {
+        const result = await shortlinkQueries.deleteShortlinkSnoozeTimer([id], controller.signal)
+        result.forEach((item) => dispatch({ type: 'remove', id: item._id }))
+      } else {
+        const result = await shortlinkQueries.deleteShortlink(id, controller.signal)
+        if (result) dispatch({ type: 'remove', id: result._id })
+      }
+      closeMenu()
+    } catch (error) {
+      if (!isAbortError(error)) setNotice({ type: 'error', message: error instanceof Error ? error.message : 'Could not update this shortlink' })
+    } finally {
+      setMutationLoading(false)
+    }
   }
 
-  _clearSelectedErrorState() {
-    this.setState({
-      selected: _.defaults({errorState: null}, this.state.selected)
-    })
+  async function saveShortlink(shortlink: ShortlinkDocument) {
+    const controller = nextController('mutation')
+    setMutationLoading(true)
+    setNotice(null)
+    try {
+      const result = await shortlinkQueries.updateShortlink(shortlink._id, shortlink, controller.signal)
+      dispatch({ type: 'update', item: result })
+      setSelected(null)
+      setNotice({ type: 'success', message: 'Shortlink updated' })
+    } catch (error) {
+      if (!isAbortError(error)) setNotice({ type: 'error', message: error instanceof Error ? error.message : 'Could not save this shortlink' })
+    } finally {
+      setMutationLoading(false)
+    }
   }
 
-  _clearSelectedSuccessState() {
-    this.setState({
-      selected: _.defaults({successState: null}, this.state.selected)
-    })
-  }
+  const menuItem = menu.id ? state.shortlinks.find((item) => item._id === menu.id) : undefined
 
-  render() {
-    const globalClass = `${styles.wrapperClass}_shortlink-list-app`
-    const listClasses = classNames({
-      [`${globalClass}`]: true,
-      [`${globalClass}_loading`]: this.state.staleResults
-    })
-    return (
-      <div className={`${listClasses}`} >
-        <div className={`${globalClass}__search`}>
-          <Input 
-            onChange={this.onSearchQueryChange}
-            onDebouncedChange={this.onSearch} 
-            value={this.state.searchQuery}
-            placeholder='Search your links'
-            rightIcon={Search}
-           />
-          <div className={`${globalClass}__search__controls`}>  
-            <RadioGroup
-              items={[
-                {label: 'All links', key: ShortlinkListSubsection.all},
-                {label: 'Snoozed', key: ShortlinkListSubsection.snoozed}
-              ]}
-              value={this.getSubsection()}
-              onChange={(key) => { this.handleInternalNavigate(key) } }
-              fullWidth={true}
-              />
-            <RadioGroup
-              items={[
-                {icon: CompactIcon, key: ShortlinkListContentDisplay.compact},
-                {icon: FullIcon, key: ShortlinkListContentDisplay.full}
-              ]}
-              value={this.state.contentDisplay}
-              onChange={this.handleContentDisplayChange}
-              />
-          </div>
-        </div>
-        <Scroller className={`${globalClass}__scroller`} onScroll={this.handleScroll}>
-          <div className={`${globalClass}__list`}>
-            { 
-              this.state.groupedShortlinks.map( (item, index, array) => {
-                if(item.isSubheader) {
-                  return <span key={index} className={`${globalClass}__subheader`}>{item.group}</span>
-                } else {
-                  return (
-                    <ShortlinkListItem key={index}
-                      timestamp={item.timestamp ?? 0}
-                      {..._.omit(item, 'hash', 'location')}
-                      hash={item.hash}
-                      location={item.location}
-                      showDescription={this.state.contentDisplay == ShortlinkListContentDisplay.full}
-                      onCopyClick={() => this.handleCopyClick(item.originalIndex)}
-                      onContextClick={(elem) => { this.handleContextClick(item.originalIndex, elem) } }
-                    />
-                  )
-                }
-              })
-            }
-            {this.state.isLoading == LoadMode.append &&  
-              <ShortlinkListItem.Loading />
-            }
-            {this.state.shortlinks.length == 0 && this.state.isLoading == LoadMode.none &&
-              <div className={`${globalClass}__list-footer_nothing`}>Nothing found</div>
-            }
-            {this.state.isLoading == LoadMode.none && this.state.shortlinks.length > 0 &&
-              <div className={`${globalClass}__list-footer_empty`}>&nbsp;</div>
-            }
-            <DropdownMenu
-              divRef={this.contextMenuRef}
-              show={this.state.contextMenu.show}
-              onClose={this.resetContextMenu}
-              onEnter={this.handleContextPortal}
-              style={ { top: this.state.contextMenu.top, left: this.state.contextMenu.left} }
-              >
-              <MenuItem label='Delete' onClick={this.handleDeleteShortlink}/>
-              <MenuItem.Separator />
-              {this.getSubsection() == ShortlinkListSubsection.snoozed && <MenuItem label='Remove snooze' onClick={this.handleRemoveSnoozeTimer}/>}
-              <MenuItem label='Edit shortlink' onClick={this.handleSelectShortlink}/>
-            </DropdownMenu>
-          </div>
-          
-        </Scroller>
-
-        {this.state.selected.shortlink && 
-          <UrlEdit 
-            onChange={this.handleUrlChange}
-            onCancel={this._clearSelected}
-            shortlink={this.state.selected.shortlink}
-            isLoading={this.state.selected.loading}
-            userContextName={this.props.context.user?.userTag ?? 'you'}
-            />
-        }
-
-        <div className={`${globalClass}__snackbar-container`}>
-          { this.state.selected.errorState && 
-            <Snackbar 
-              className={`${globalClass}__shortlink-list-error`}
-              message={this.state.selected.errorState}
-              canDismiss={true}
-              onDismiss={this._clearSelectedErrorState}
-              />
-          }
-          { this.state.selected.successState && 
-            <Snackbar 
-              className={`${globalClass}__shortlink-list-success`}
-              message={this.state.selected.successState}
-              canDismiss={true}
-              timer={2000}
-              onDismiss={this._clearSelectedSuccessState}
-              />
-          }
-        </div>
+  return <div className={listClasses}>
+    <div className={`${globalClass}__search`}>
+      <Input onValueChange={(value) => dispatch({ type: 'search', value })} value={state.searchQuery}
+        placeholder="Search your links" aria-label="Search your links" rightIcon={Search} />
+      <div className={`${globalClass}__search__controls`}>
+        <RadioGroup label="Shortlink section" items={[
+          { label: 'All links', key: ShortlinkListSubsection.all },
+          { label: 'Snoozed', key: ShortlinkListSubsection.snoozed }
+        ]} value={subsection} onChange={(key) => navigate(key === ShortlinkListSubsection.snoozed ? '/app/snoozed' : '/app')} fullWidth />
+        <RadioGroup label="Shortlink display density" items={[
+          { icon: CompactIcon, ariaLabel: 'Compact display', key: ShortlinkListContentDisplay.compact },
+          { icon: FullIcon, ariaLabel: 'Full display', key: ShortlinkListContentDisplay.full }
+        ]} value={state.contentDisplay} onChange={(key) => {
+          const value = key as ShortlinkListContentDisplay
+          dispatch({ type: 'display', value }); setCookie('content-display', value, 180)
+        }} />
       </div>
-    )
-  }
+    </div>
+    <Scroller className={`${globalClass}__scroller`} onScroll={(_top, _height, _client, direction) => { if ((direction ?? 0) > 0) append() }}>
+      <div className={`${globalClass}__list`}>
+        {grouped.map((item) => item.isSubheader
+          ? <span key={item.key} className={`${globalClass}__subheader`}>{item.group}</span>
+          : <ShortlinkListItem key={item._id} {...item} showDescription={state.contentDisplay === ShortlinkListContentDisplay.full}
+              menuOpen={menu.id === item._id} onCopyClick={() => clipboardTools.copy(item.descriptor ? linkTools.generateDescriptiveShortlink(item.descriptor) : linkTools.generateShortlinkFromHash(item.hash))}
+              onContextClick={(element) => openMenu(item._id, element)} />)}
+        {state.loadMode === 'append' && <ShortlinkListItem.Loading />}
+        {state.shortlinks.length === 0 && state.loadMode === 'none' && !state.error && <div className={`${globalClass}__list-footer_nothing`}>Nothing found</div>}
+        {state.loadMode === 'none' && state.shortlinks.length > 0 && <div className={`${globalClass}__list-footer_empty`}>&nbsp;</div>}
+        <DropdownMenu divRef={menuRef} show={!!menu.id} onClose={closeMenu} onEnter={positionMenu}
+          style={{ top: menu.top, left: menu.left }} label="Shortlink actions">
+          <MenuItem label="Delete" onClick={() => void deleteSelected(false)} isDisabled={mutationLoading} />
+          <MenuItem.Separator />
+          {subsection === ShortlinkListSubsection.snoozed && <MenuItem label="Remove snooze" onClick={() => void deleteSelected(true)} isDisabled={mutationLoading} />}
+          <MenuItem label="Edit shortlink" onClick={() => { if (menuItem) setSelected({ ...menuItem }); closeMenu() }} />
+        </DropdownMenu>
+      </div>
+    </Scroller>
+    {selected && <UrlEdit onChange={(value) => void saveShortlink(value)} onCancel={() => setSelected(null)}
+      shortlink={selected} isLoading={mutationLoading} userContextName={appContext.user?.userTag ?? 'you'} />}
+    <div className={`${globalClass}__snackbar-container`}>
+      {state.error && <Snackbar type={SnackbarType.ERROR} className={`${globalClass}__shortlink-list-error`}
+        message={state.error} action="Retry" onAction={retry} canDismiss onDismiss={() => dispatch({ type: 'clear-error' })} />}
+      {notice && <Snackbar type={notice.type === 'error' ? SnackbarType.ERROR : SnackbarType.MESSAGE}
+        className={`${globalClass}__shortlink-list-${notice.type}`} message={notice.message} canDismiss
+        timer={notice.type === 'success' ? 2000 : undefined} onDismiss={() => setNotice(null)} />}
+    </div>
+  </div>
 }

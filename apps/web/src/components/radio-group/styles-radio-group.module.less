@@ -7,6 +7,10 @@
   flex-direction: row;
   padding: 4px;
   background-color: @black-95;
+  border: 0;
+  margin: 0;
+  min-width: 0;
+  font: inherit;
   border-radius: 4px;
   gap: 4px;
 
@@ -15,6 +19,23 @@
   }
 
   &__radio-button {
+  &__legend {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  &__native-radio {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
     .t-text_16-20;
     border-radius: 2px;
     height: 100%;
@@ -45,4 +66,6 @@
     align-items: center;
     justify-content: center;
   }
-}
+}  &__radio-button:focus-within {
+    box-shadow: 0 0 0 0.125rem @pure-blue-70;
+  }

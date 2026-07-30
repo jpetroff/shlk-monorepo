@@ -1,4 +1,3 @@
-import * as _ from 'underscore'
 import constants from './constants'
 import './modernizr_build.js'
 
@@ -15,10 +14,6 @@ export function modifyURLSlug (str: string) : string {
 
 export function canShortcutPasteWithKeyboard () : boolean {
   return !(Modernizr.touchevents && Modernizr.mq(constants.MediaQueries.mobile))
-}
-
-export function checkMobileMQ () : boolean {
-  return Modernizr.mq(constants.MediaQueries.mobile)
 }
 
 export function setCookie(cname: string, cvalue: string, exdays: number) {
@@ -59,13 +54,5 @@ export function valueByPath(object: AnyObject, path: string[]) : unknown {
     return result
   } catch {
     return null
-  }
-}
-
-export function DOMContentLoaded(fn: () => void) {
-  if(document.readyState !== 'loading') {
-    _.defer(fn)
-  } else {
-    document.addEventListener('DOMContentLoaded', fn)
   }
 }
