@@ -9,7 +9,7 @@
     "build": "bun run typecheck",
     "lint": "bun run --cwd ../../tools/lint lint:api",
     "typecheck": "bunx tsc -p tsconfig.json",
-    "test": "bun test test"
+    "test": "bun run --cwd ../.. test:api"
   },
   "dependencies": {
     "@graphql-tools/merge": "9.2.2",

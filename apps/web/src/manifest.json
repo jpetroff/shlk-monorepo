@@ -14,10 +14,7 @@
         "notifications"
     ],
     "optional_permissions": [],
-    "host_permissions": [
-        "https://shlk.cc/*",
-        "http://localhost:8002/*"
-    ],
+    "host_permissions": [],
     "action": {
         "default_popup": "index.html",
         "default_icon": "/assets/favicon/chrome_extension_icon.png"

@@ -1,18 +1,30 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import react from '@vitejs/plugin-react'
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
 import svgr from 'vite-plugin-svgr'
 
-function extensionManifest(): Plugin {
+export function extensionHostPermission(backendUrl: string): string {
+  const url = new URL(backendUrl)
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new Error('VITE_BACKEND_URL must use http or https')
+  }
+  return `${url.origin}/*`
+}
+
+function extensionManifest(backendUrl: string): Plugin {
   return {
     name: 'shlk-extension-manifest',
     apply: 'build',
     generateBundle() {
+      const manifest = JSON.parse(
+        readFileSync(resolve(import.meta.dirname, 'src/manifest.json'), 'utf8')
+      ) as { host_permissions?: string[] }
+      manifest.host_permissions = [extensionHostPermission(backendUrl)]
       this.emitFile({
         type: 'asset',
         fileName: 'manifest.json',
-        source: readFileSync(resolve(import.meta.dirname, 'src/manifest.json'), 'utf8')
+        source: `${JSON.stringify(manifest, null, 2)}\n`
       })
     }
   }
@@ -20,13 +32,16 @@ function extensionManifest(): Plugin {
 
 export default defineConfig(({ mode }) => {
   const extension = mode.startsWith('extension')
+  const envDir = resolve(import.meta.dirname, '..', '..')
+  const env = loadEnv(mode, envDir, '')
+  const backendUrl = env.VITE_BACKEND_URL || 'http://localhost:8002'
   return {
-    envDir: resolve(import.meta.dirname, '..', '..'),
+    envDir,
     base: extension ? './' : '/',
     plugins: [
       react(),
       svgr({ include: '**/*.svg?react' }),
-      ...(extension ? [extensionManifest()] : [])
+      ...(extension ? [extensionManifest(backendUrl)] : [])
     ],
     css: {
       modules: {

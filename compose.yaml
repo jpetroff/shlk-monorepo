@@ -1,0 +1,73 @@
+name: shlk
+
+services:
+  mongo:
+    image: mongo:8.0.28
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?Set MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD}
+      MONGO_DB: ${MONGO_DB:-shlk}
+      MONGO_APP_USERNAME: ${MONGO_APP_USERNAME:?Set MONGO_APP_USERNAME}
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD:?Set MONGO_APP_PASSWORD}
+    volumes:
+      - mongo-data:/data/db
+      - ./docker/mongo-init.js:/docker-entrypoint-initdb.d/10-create-app-user.js:ro
+    networks:
+      - backend
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          mongosh --quiet --host 127.0.0.1
+          --username "$${MONGO_INITDB_ROOT_USERNAME}"
+          --password "$${MONGO_INITDB_ROOT_PASSWORD}"
+          --authenticationDatabase admin
+          --eval 'quit(db.adminCommand({ ping: 1 }).ok ? 0 : 2)'
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  app:
+    build:
+      context: .
+      target: runtime
+      args:
+        VITE_BACKEND_URL: ${VITE_BACKEND_URL:?Set VITE_BACKEND_URL}
+        VITE_PUBLIC_SERVICE_URL: ${VITE_PUBLIC_SERVICE_URL:?Set VITE_PUBLIC_SERVICE_URL}
+        VITE_DISPLAY_SERVICE_URL: ${VITE_DISPLAY_SERVICE_URL:?Set VITE_DISPLAY_SERVICE_URL}
+        VITE_EXTENSION_STORE_URL: ${VITE_EXTENSION_STORE_URL:?Set VITE_EXTENSION_STORE_URL}
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 8002
+      MONGO_URI: mongodb://${MONGO_APP_USERNAME}:${MONGO_APP_PASSWORD}@mongo:27017/${MONGO_DB:-shlk}?authSource=${MONGO_DB:-shlk}
+      APP_SESSION_SECRET: ${APP_SESSION_SECRET:?Set APP_SESSION_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?Set GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?Set GOOGLE_CLIENT_SECRET}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:?Set GOOGLE_REDIRECT_URI}
+      WEB_APP_URL: ${WEB_APP_URL:?Set WEB_APP_URL}
+      PUBLIC_SERVICE_URL: ${PUBLIC_SERVICE_URL:?Set PUBLIC_SERVICE_URL}
+      DISPLAY_SERVICE_URL: ${DISPLAY_SERVICE_URL:?Set DISPLAY_SERVICE_URL}
+      EXTENSION_ORIGIN: ${EXTENSION_ORIGIN:?Set EXTENSION_ORIGIN}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+    ports:
+      - ${BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-8002}:8002
+    networks:
+      - backend
+
+volumes:
+  mongo-data:
+
+networks:
+  backend:

@@ -4,10 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite --mode webapp",
-    "dev:extension": "vite build --mode extension-development --watch",
+    "dev:extension": "NODE_ENV=development vite build --mode extension-development --watch",
     "build": "bun run build:web && bun run build:extension",
-    "build:web": "vite build --mode webapp",
-    "build:extension": "vite build --mode extension",
+    "build:web": "NODE_ENV=production vite build --mode webapp",
+    "build:extension": "NODE_ENV=production vite build --mode extension",
     "lint": "bun run --cwd ../../tools/lint lint:web",
     "typecheck": "bunx tsc -p tsconfig.json",
     "test": "vitest run",

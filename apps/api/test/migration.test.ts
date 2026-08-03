@@ -1,14 +1,86 @@
 import { describe, expect, test } from 'bun:test'
 import type { Request, Response } from 'express'
 import { Kind, parse } from 'graphql'
+import { loadConfig, parseTrustProxy, validateConfig } from '../src/config'
 import { executeGraphQLRequest } from '../src/graphql/http'
 import { LongType, MixedType } from '../src/graphql/extends'
+import { extensionCorsOrigin, sessionCookieOptions } from '../src/libs/app'
 import { matchesBanlist } from '../src/libs/ban.queries'
 import generateHash, { HASH_ALPHABET } from '../src/libs/hash.lib'
 import { modifyURLSlug, normalizeURL } from '../src/libs/utils'
 
 const req = { session: { userId: 'test-user' } } as unknown as Request
 const res = {} as Response
+
+const validEnvironment = {
+  NODE_ENV: 'production',
+  PORT: '8002',
+  MONGO_URI: 'mongodb://mongo:27017/shlk',
+  APP_SESSION_SECRET: 'a'.repeat(32),
+  GOOGLE_CLIENT_ID: 'client-id',
+  GOOGLE_CLIENT_SECRET: 'client-secret',
+  GOOGLE_REDIRECT_URI: 'https://shlk.example/oauth/google/callback',
+  WEB_APP_URL: 'https://shlk.example',
+  PUBLIC_SERVICE_URL: 'https://shlk.example',
+  DISPLAY_SERVICE_URL: 'shlk.example',
+  EXTENSION_ORIGIN: 'chrome-extension://abcdefghijklmnopqrstuvwxyzabcdef',
+  TRUST_PROXY: '1'
+}
+
+describe('runtime configuration', () => {
+  test('parses disabled, hop-count, and explicit proxy settings', () => {
+    expect(parseTrustProxy(undefined)).toBe(false)
+    expect(parseTrustProxy('0')).toBe(false)
+    expect(parseTrustProxy('2')).toBe(2)
+    expect(parseTrustProxy('loopback')).toBe('loopback')
+  })
+
+  test('requires OAuth configuration in development', () => {
+    const environment = { ...validEnvironment, NODE_ENV: 'development', GOOGLE_CLIENT_ID: '' }
+    expect(() => validateConfig(loadConfig(environment))).toThrow('GOOGLE_CLIENT_ID')
+  })
+
+  test('rejects weak secrets and insecure production URLs', () => {
+    const environment = {
+      ...validEnvironment,
+      APP_SESSION_SECRET: 'short',
+      WEB_APP_URL: 'http://shlk.example'
+    }
+    expect(() => validateConfig(loadConfig(environment))).toThrow('APP_SESSION_SECRET')
+    expect(() => validateConfig(loadConfig(environment))).toThrow('WEB_APP_URL')
+  })
+
+  test('rejects unchanged production placeholders', () => {
+    const environment = {
+      ...validEnvironment,
+      GOOGLE_CLIENT_SECRET: 'replace-with-google-client-secret'
+    }
+    expect(() => validateConfig(loadConfig(environment))).toThrow('GOOGLE_CLIENT_SECRET')
+  })
+
+  test('accepts a complete production configuration', () => {
+    expect(validateConfig(loadConfig(validEnvironment)).TRUST_PROXY).toBe(1)
+  })
+
+  test('preserves the exact Chrome extension origin for CORS', () => {
+    expect(extensionCorsOrigin('chrome-extension://abcdefghijklmnopqrstuvwxyzabcdef/')).toBe(
+      'chrome-extension://abcdefghijklmnopqrstuvwxyzabcdef'
+    )
+  })
+
+  test('hardens only production session cookies', () => {
+    expect(sessionCookieOptions(false)).toMatchObject({
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax'
+    })
+    expect(sessionCookieOptions(true)).toMatchObject({
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax'
+    })
+  })
+})
 
 describe('GraphQL 17 transport', () => {
   test('builds the schema and permits development introspection', async () => {

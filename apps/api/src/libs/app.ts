@@ -1,5 +1,5 @@
 import express, { type ErrorRequestHandler, type Express } from 'express'
-import session, { type Store } from 'express-session'
+import session, { type CookieOptions, type Store } from 'express-session'
 import Helmet, { type HelmetOptions } from 'helmet'
 import config from '../config'
 import { graphqlHttpHandler } from '../graphql/http'
@@ -20,10 +20,15 @@ const helmetOptions: HelmetOptions = {
   crossOriginEmbedderPolicy: false
 }
 
+export function extensionCorsOrigin(value: string): string {
+  const url = new URL(value)
+  return `${url.protocol}//${url.host}`
+}
+
 function useApiCors(app: Express): void {
   const allowedOrigins = new Set([
     new URL(config.WEB_APP_URL).origin,
-    new URL(config.EXTENSION_ORIGIN).origin
+    extensionCorsOrigin(config.EXTENSION_ORIGIN)
   ])
   app.use('/api', (req, res, next) => {
     const origin = req.get('origin')
@@ -46,12 +51,24 @@ function useApiCors(app: Express): void {
   })
 }
 
+export function sessionCookieOptions(production: boolean): CookieOptions {
+  return {
+    maxAge: 1000 * 60 * 60 * 24 * 30 * 6,
+    httpOnly: true,
+    secure: production,
+    sameSite: 'lax'
+  }
+}
+
 export function createApp(store: Store): Express {
   const app = express()
+  const production = config.NODE_ENV === 'production'
+
+  if (config.TRUST_PROXY !== false) app.set('trust proxy', config.TRUST_PROXY)
 
   // Static requests must not create a session.
   app.use(staticRoute)
-  if (config.NODE_ENV === 'production') app.use(Helmet(helmetOptions))
+  if (production) app.use(Helmet(helmetOptions))
   app.use(async (req, res, next) => {
     try {
       await checkBanlist(req.ip ?? '', 'IP')
@@ -68,11 +85,7 @@ export function createApp(store: Store): Express {
   app.use(session({
     secret: config.APP_SESSION_SECRET,
     name: 'sid',
-    cookie: {
-      maxAge: 1000 * 60 * 60 * 24 * 30 * 6,
-      httpOnly: false,
-      secure: false
-    },
+    cookie: sessionCookieOptions(production),
     store,
     resave: false,
     saveUninitialized: false

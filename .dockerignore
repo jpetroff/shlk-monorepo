@@ -1,0 +1,15 @@
+.git
+.github
+.codex
+.memory
+.serena
+.env
+.env.*
+node_modules
+coverage
+release
+apps/*/dist
+apps/*/*.crx
+apps/*/*.zip
+*.log
+.DS_Store
