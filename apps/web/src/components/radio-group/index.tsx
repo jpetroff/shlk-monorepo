@@ -11,8 +11,7 @@ export default function RadioGroup({ items, onChange, value, label, fullWidth = 
   const globalClass = `${styles.wrapperClass}_radio-group`
   const classes = classNames({ [globalClass]: true, [`${globalClass}_full-width`]: fullWidth })
 
-  return <fieldset className={classes}>
-    <legend className={`${globalClass}__legend`}>{label}</legend>
+  return <fieldset className={classes} aria-label={label}>
     {items.map((item) => {
       const itemLabel = item.ariaLabel ?? item.label
       return <label className={classNames(`${globalClass}__radio-button`, {

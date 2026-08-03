@@ -14,7 +14,6 @@ type Props = { onChange: (value: string, isClearPress?: boolean) => void,
 export default function HeroInput({ onChange, onSubmit, onSnooze, name, placeholder, value = '', inputRef,
   onFocus, onBlur, mobileTip, hasCta = true }: Props) {
   const [focused, setFocused] = React.useState(false)
-  const inputId = React.useId()
   const context = useAppContext()
   const globalClass = styles.wrapperClass + '_hero-input'
   const modifiers = [focused ? `${globalClass}_focus` : '', value ? `${globalClass}_not-empty` : `${globalClass}_empty`].filter(Boolean)
@@ -25,8 +24,7 @@ export default function HeroInput({ onChange, onSubmit, onSnooze, name, placehol
   }
 
   return <div className={`${globalClass} ${modifiers.join(' ')}`}>
-    <label htmlFor={inputId} className={`${globalClass}__visually-hidden`}>{placeholder}</label>
-    <input className={`${globalClass}__input-elem`} id={inputId} ref={inputRef}
+    <input className={`${globalClass}__input-elem`} ref={inputRef} aria-label={placeholder}
       onChange={(event) => onChange(event.currentTarget.value)}
       onKeyDown={(event) => { if (event.key === 'Enter') onSubmit() }}
       onFocus={(event) => { setFocused(true); onFocus?.(event) }}

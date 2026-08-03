@@ -9,6 +9,9 @@ import RadioGroup from '../src/components/radio-group'
 import DropdownMenu from '../src/components/dropdown-menu'
 import MenuItem from '../src/components/menu-item'
 import Snackbar, { SnackbarType } from '../src/components/snackbar'
+import ShortlinkListItem from '../src/components/shortlink-list-item'
+import HeroInput from '../src/components/hero-input'
+import AppContext from '../src/js/app.context'
 
 afterEach(() => vi.useRealTimers())
 
@@ -49,11 +52,31 @@ it('supports native radio keyboard selection with group and item labels', async 
     ]} />
   }
   render(<Harness />)
+  expect(screen.getByRole('group', { name: 'Display density' })).toBeInTheDocument()
+  expect(document.querySelector('legend')).not.toBeInTheDocument()
   const compact = screen.getByRole('radio', { name: 'Compact' })
   const full = screen.getByRole('radio', { name: 'Full' })
   compact.focus()
   await user.keyboard('{ArrowRight}')
   expect(full).toBeChecked()
+})
+
+it('keeps shortlink menu state on the action button instead of rendering attribute text', () => {
+  render(<ShortlinkListItem hash="abc" location="https://example.com" timestamp={0}
+    siteTitle="Example" menuOpen />)
+  const action = screen.getByRole('button', { name: 'Actions for Example' })
+  expect(action).toHaveAttribute('aria-haspopup', 'menu')
+  expect(action).toHaveAttribute('aria-expanded', 'true')
+  expect(screen.queryByText(/aria-haspopup/)).not.toBeInTheDocument()
+})
+
+it('names the hero URL input without rendering an extra label', () => {
+  render(<AppContext.Provider value={{ requestUpdate: vi.fn().mockResolvedValue(undefined) }}>
+    <HeroInput name="URL" placeholder="Type or paste a link" onChange={vi.fn()}
+      onSubmit={vi.fn()} onSnooze={vi.fn()} />
+  </AppContext.Provider>)
+  expect(screen.getByRole('textbox', { name: 'Type or paste a link' })).toBeInTheDocument()
+  expect(document.querySelector('label')).not.toBeInTheDocument()
 })
 
 it('focuses and keyboard-navigates menu items, then handles Escape', async () => {

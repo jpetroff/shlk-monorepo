@@ -31,8 +31,8 @@ function ShortlinkListItem({ location, hash, descriptor, siteTitle, siteDescript
         <span className={`${globalClass}__shortlink`}>{displayShortlink}</span>
       </ActionLink>
       <Button icon={MoreVertical} size={ButtonSize.SMALL} type={ButtonType.GHOST}
-        aria-label={`Actions for ${siteTitle || location}`} onClick={(_event, element) => { if (element) onContextClick?.(element) }} />
-        aria-haspopup="menu" aria-expanded={menuOpen}
+        aria-label={`Actions for ${siteTitle || location}`} aria-haspopup="menu" aria-expanded={menuOpen}
+        onClick={(_event, element) => { if (element) onContextClick?.(element) }} />
     </div>
   </div>
 }
