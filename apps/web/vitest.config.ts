@@ -7,6 +7,11 @@ export default defineConfig({
     react(),
     svgr({ include: '**/*.svg?react' })
   ],
+  css: {
+    modules: {
+      scopeBehaviour: 'global'
+    }
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['./test/setup.ts'],

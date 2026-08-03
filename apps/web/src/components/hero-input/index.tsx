@@ -4,6 +4,7 @@ import Button, { ButtonSize, ButtonType } from '../button'
 import { Cross, Enter, Snooze } from '../icons'
 import clipboardTools from '../../js/clipboard.tools'
 import { useAppContext } from '../../js/app.context'
+import { canShortcutPasteWithKeyboard } from '../../js/utils'
 
 type Props = { onChange: (value: string, isClearPress?: boolean) => void,
   onSubmit: (value?: string) => void, onSnooze: () => void, placeholder: string, name: string,
@@ -16,7 +17,11 @@ export default function HeroInput({ onChange, onSubmit, onSnooze, name, placehol
   const [focused, setFocused] = React.useState(false)
   const context = useAppContext()
   const globalClass = styles.wrapperClass + '_hero-input'
-  const modifiers = [focused ? `${globalClass}_focus` : '', value ? `${globalClass}_not-empty` : `${globalClass}_empty`].filter(Boolean)
+  const modifiers = [
+    focused ? `${globalClass}_focus` : '',
+    canShortcutPasteWithKeyboard() ? `${globalClass}_can-shortcut-paste` : '',
+    value ? `${globalClass}_not-empty` : `${globalClass}_empty`
+  ].filter(Boolean)
 
   async function paste() {
     const clipText = await clipboardTools.paste()
@@ -36,7 +41,8 @@ export default function HeroInput({ onChange, onSubmit, onSnooze, name, placehol
     </div>
     <div className={`${globalClass}__actions ${globalClass}__cta-actions`}>
       {mobileTip && <span className={`${globalClass}__cta-actions__mobile-tip`}>{mobileTip}</span>}
-      <Button label="Paste" type={ButtonType.SECONDARY} size={ButtonSize.LARGE} onClick={() => void paste()} />
+      <Button className={`${globalClass}__paste`} label="Paste" type={ButtonType.SECONDARY}
+        size={ButtonSize.LARGE} onClick={() => void paste()} />
       {context.user && <Button icon={Snooze} className={`${globalClass}__snooze`} label="Snooze"
         type={ButtonType.SECONDARY} size={ButtonSize.LARGE} onClick={onSnooze} />}
       <Button icon={Enter} className={`${globalClass}__create`} label="Create"

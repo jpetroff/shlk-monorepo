@@ -28,6 +28,11 @@ export default defineConfig(({ mode }) => {
       svgr({ include: '**/*.svg?react' }),
       ...(extension ? [extensionManifest()] : [])
     ],
+    css: {
+      modules: {
+        scopeBehaviour: 'global'
+      }
+    },
     server: {
       port: 5173,
       allowedHosts: true,
