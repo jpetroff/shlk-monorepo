@@ -39,8 +39,10 @@ COPY --from=production-dependencies /app/node_modules ./node_modules
 COPY package.json bun.lock ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/api/src apps/api/src
+COPY apps/api/drizzle apps/api/drizzle
 COPY apps/web/package.json apps/web/package.json
 COPY --from=build /app/apps/web/dist/web apps/web/dist/web
+RUN mkdir -p /var/lib/shlk && chown bun:bun /var/lib/shlk
 USER bun
 EXPOSE 8002
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \

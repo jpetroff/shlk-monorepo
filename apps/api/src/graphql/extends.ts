@@ -2,7 +2,7 @@ import { GraphQLScalarType, Kind, type ValueNode, GraphQLError } from 'graphql'
 
 export const MixedType = new GraphQLScalarType({
   name: 'Mixed',
-  description: 'Represents Mongo Mixed type',
+  description: 'Represents a JSON-compatible mixed value',
   parseValue: toObject,
   serialize: toObject,
   parseLiteral: parseAst

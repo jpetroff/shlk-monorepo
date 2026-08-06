@@ -11,10 +11,10 @@ export default {
       try {
         const userId = context?.req?.session?.userId
 
-        const loggedUser : Maybe<ResultDoc<UserDocument>> = await getUser(userId)
+        const loggedUser : Maybe<UserDocument> = await getUser(userId)
         if(!loggedUser) return null
 
-        const loggedProfile : UserProfile = _.pick(loggedUser.toObject(), UserProfileFields)
+        const loggedProfile : UserProfile = _.pick(loggedUser, UserProfileFields)
         loggedProfile.predefinedTimers = await queryPredefinedTimers(userId)
         return loggedProfile
 
@@ -51,7 +51,7 @@ export default {
       try {
         const userId = authUserId(context?.req)
         const result = await updateUserById(userId, args)
-        return result?.toObject() || null
+        return result
       } catch(error: any) {
         throw resolveError(error)
       }
@@ -64,7 +64,7 @@ export default {
         ...args
       })
       if(!shortlink) return null
-      return shortlink.toObject()
+      return shortlink
     },
 
     deleteShortlinkSnoozeTimer: async (parent: any, { ids } : { ids: string[] }, context: any) : Promise<ShortlinkDocument[]> => {
@@ -72,8 +72,8 @@ export default {
         const userId = authUserId(context?.req)
         const result : ShortlinkDocument[] = []
         for(let i = 0; i < ids.length; i++) {
-          const shortlink = await queryAndDeleteShortlinkSnoozeTimer(ids[i])
-          if(shortlink) result.push(shortlink.toObject())
+          const shortlink = await queryAndDeleteShortlinkSnoozeTimer(ids[i], userId)
+          if(shortlink) result.push(shortlink)
         }
         return result
       } catch(error: any) {
@@ -84,9 +84,9 @@ export default {
     deleteShortlink: async (parent: any, { id } : {id: string}, context: any) : Promise<ShortlinkDocument | null> => {
       try {
         const userId = authUserId(context?.req)
-        const shortlink = await deleteShortlink(id)
+        const shortlink = await deleteShortlink(id, userId)
         if(!shortlink) return null
-        return shortlink.toObject()
+        return shortlink
       } catch(error) {
         throw resolveError(error)
       }
@@ -97,7 +97,7 @@ export default {
         const userId = authUserId(context?.req)
         const newShortlink = await updateShortlink(userId, {id, shortlink})
         if(!newShortlink) return null
-        return newShortlink.toObject()
+        return newShortlink
       } catch(error) {
         throw resolveError(error)
       }

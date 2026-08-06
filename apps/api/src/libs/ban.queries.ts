@@ -1,4 +1,6 @@
-import Banlist, { type BanType } from '../models/banlist'
+import { eq } from 'drizzle-orm'
+import { db } from '../db/client'
+import { banlist, type BanType } from '../db/schema'
 import { ExtError } from './utils'
 
 export function matchesBanlist(
@@ -28,7 +30,10 @@ export function matchesBanlist(
  * expressions; all other entries use exact matching.
  */
 export async function checkBanlist(value: string, type: BanType): Promise<void> {
-  const entries = await Banlist.find({ type }, { value: 1, _id: 0 }).lean()
+  const entries = db.select({ value: banlist.value })
+    .from(banlist)
+    .where(eq(banlist.type, type))
+    .all()
   if (!matchesBanlist(value, type, entries.map((entry) => entry.value))) return
 
   throw new ExtError(

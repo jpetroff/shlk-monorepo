@@ -53,11 +53,11 @@ export default {
       try {
         const shortlink = await getShortlink(args)
         if(context.req?.session?.userId == shortlink?.owner) {
-          return shortlink?.toObject()
+          return shortlink
         }
 
         if (shortlink) {
-          return _.pick(shortlink.toObject(), ShortlinkPublicFields)
+          return _.pick(shortlink, ShortlinkPublicFields)
         } 
           
         return null
@@ -70,11 +70,11 @@ export default {
       try {
         const shortlink = await getShortlink(args)
         if(context.req?.session?.userId == shortlink?.owner) {
-          return shortlink?.toObject()
+          return shortlink
         }
 
         if (shortlink) {
-          return _.pick(shortlink.toObject(), ShortlinkPublicFields)
+          return _.pick(shortlink, ShortlinkPublicFields)
         } 
           
         return null

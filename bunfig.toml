@@ -1,2 +1,0 @@
-[test]
-preload = ["./apps/api/src/bun-compat.ts"]

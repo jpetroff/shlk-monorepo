@@ -5,9 +5,11 @@ bun.lockb
 !.env.example
 !.env.docker.example
 apps/*/dist/
+apps/api/data/
 apps/*/*.crx
 apps/*/*.zip
 coverage/
+playwright/.auth/
 *.log
 .DS_Store
 

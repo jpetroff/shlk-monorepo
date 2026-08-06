@@ -63,7 +63,7 @@ export async function oauthCallback (req: express.Request, res: express.Response
         ip: req.ip
       })
 
-      req.session.userId = user?._id.toString()
+      req.session.userId = user?._id
       req.session.tokens = r.tokens
 
       res.redirect(config.WEB_APP_URL)

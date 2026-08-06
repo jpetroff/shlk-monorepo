@@ -1,5 +1,4 @@
 const requiredNames = [
-  'MONGO_URI',
   'APP_SESSION_SECRET',
   'GOOGLE_CLIENT_ID',
   'GOOGLE_CLIENT_SECRET',
@@ -26,11 +25,12 @@ export function loadConfig(env: Environment = process.env) {
   return {
     NODE_ENV: env.NODE_ENV ?? 'development',
     PORT: Number.parseInt(env.PORT ?? '8002', 10),
-    MONGO_URI: env.MONGO_URI ?? '',
+    SQLITE_PATH: env.SQLITE_PATH ?? './data/shlk.sqlite',
     APP_SESSION_SECRET: env.APP_SESSION_SECRET ?? '',
     GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID ?? '',
     GOOGLE_CLIENT_SECRET: env.GOOGLE_CLIENT_SECRET ?? '',
     GOOGLE_REDIRECT_URI: env.GOOGLE_REDIRECT_URI ?? '',
+    E2E_AUTH_SECRET: env.E2E_AUTH_SECRET?.trim() ?? '',
     WEB_APP_URL: env.WEB_APP_URL ?? '',
     PUBLIC_SERVICE_URL: env.PUBLIC_SERVICE_URL ?? '',
     DISPLAY_SERVICE_URL: env.DISPLAY_SERVICE_URL ?? '',
@@ -56,9 +56,7 @@ export function validateConfig(input: AppConfig = config): AppConfig {
   if (!Number.isInteger(input.PORT) || input.PORT < 1 || input.PORT > 65_535) {
     invalid.push('PORT')
   }
-  if (input.MONGO_URI && !hasProtocol(input.MONGO_URI, ['mongodb:', 'mongodb+srv:'])) {
-    invalid.push('MONGO_URI')
-  }
+  if (!input.SQLITE_PATH.trim()) invalid.push('SQLITE_PATH')
   if (input.GOOGLE_REDIRECT_URI && !hasProtocol(input.GOOGLE_REDIRECT_URI, ['http:', 'https:'])) {
     invalid.push('GOOGLE_REDIRECT_URI')
   }
@@ -71,7 +69,11 @@ export function validateConfig(input: AppConfig = config): AppConfig {
   if (input.EXTENSION_ORIGIN && !hasProtocol(input.EXTENSION_ORIGIN, ['chrome-extension:'])) {
     invalid.push('EXTENSION_ORIGIN')
   }
+  if (input.E2E_AUTH_SECRET && input.E2E_AUTH_SECRET.length < 32) {
+    invalid.push('E2E_AUTH_SECRET')
+  }
   if (input.NODE_ENV === 'production') {
+    if (input.E2E_AUTH_SECRET) invalid.push('E2E_AUTH_SECRET')
     if (
       input.APP_SESSION_SECRET.length < 32 ||
       input.APP_SESSION_SECRET.startsWith('replace-with')

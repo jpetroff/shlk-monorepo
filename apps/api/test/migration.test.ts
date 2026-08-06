@@ -15,7 +15,7 @@ const res = {} as Response
 const validEnvironment = {
   NODE_ENV: 'production',
   PORT: '8002',
-  MONGO_URI: 'mongodb://mongo:27017/shlk',
+  SQLITE_PATH: '/var/lib/shlk/shlk.sqlite',
   APP_SESSION_SECRET: 'a'.repeat(32),
   GOOGLE_CLIENT_ID: 'client-id',
   GOOGLE_CLIENT_SECRET: 'client-secret',
@@ -56,6 +56,22 @@ describe('runtime configuration', () => {
       GOOGLE_CLIENT_SECRET: 'replace-with-google-client-secret'
     }
     expect(() => validateConfig(loadConfig(environment))).toThrow('GOOGLE_CLIENT_SECRET')
+  })
+  test('rejects a weak test login secret', () => {
+    const environment = {
+      ...validEnvironment,
+      NODE_ENV: 'development',
+      E2E_AUTH_SECRET: 'too-short'
+    }
+    expect(() => validateConfig(loadConfig(environment))).toThrow('E2E_AUTH_SECRET')
+  })
+
+  test('rejects enabling the test login endpoint in production', () => {
+    const environment = {
+      ...validEnvironment,
+      E2E_AUTH_SECRET: 'must-not-be-enabled-in-production'
+    }
+    expect(() => validateConfig(loadConfig(environment))).toThrow('E2E_AUTH_SECRET')
   })
 
   test('accepts a complete production configuration', () => {

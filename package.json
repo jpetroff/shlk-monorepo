@@ -15,7 +15,7 @@
     "lint": "bun run --cwd tools/lint lint",
     "typecheck": "bun run --filter '*' typecheck",
     "test": "bun run test:api && bun run test:web",
-    "test:api": "bun test apps/api/test",
+    "test:api": "SQLITE_PATH=:memory: bun test apps/api/test",
     "test:web": "bun run --filter @shlk/web test"
   },
   "devDependencies": {

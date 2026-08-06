@@ -1,21 +1,15 @@
-import MongoStore from 'connect-mongo'
-import mongoose from 'mongoose'
 import config from '../config'
+import { migrateDatabase } from '../db/migrate'
+import { sqlite } from '../db/client'
+import { SQLiteSessionStore } from '../db/sqlite-session.store'
 import { cliColors } from './utils'
 
-const sixMonthsInSeconds = 60 * 60 * 24 * 30 * 6
-
 export async function connectDatabase(): Promise<void> {
-  console.log('[…] Connecting to MongoDB')
-  await mongoose.connect(config.MONGO_URI)
-  console.log(`${cliColors.green}[✓]${cliColors.end} Connected to MongoDB`)
+  console.log(`[…] Opening SQLite database at ${config.SQLITE_PATH}`)
+  migrateDatabase()
+  console.log(`${cliColors.green}[✓]${cliColors.end} SQLite database ready`)
 }
 
-export function createSessionStore(): MongoStore {
-  return MongoStore.create({
-    mongoUrl: config.MONGO_URI,
-    collectionName: 'sessions',
-    ttl: sixMonthsInSeconds
-  })
+export function createSessionStore(): SQLiteSessionStore {
+  return new SQLiteSessionStore(sqlite)
 }
-

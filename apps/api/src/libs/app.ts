@@ -6,6 +6,7 @@ import { graphqlHttpHandler } from '../graphql/http'
 import { appRouter, staticRoute } from './app.routes'
 import { checkBanlist } from './ban.queries'
 import { oauthRouter } from './oauth.routes'
+import { createTestAuthRouter } from './test-auth.routes'
 
 const helmetOptions: HelmetOptions = {
   contentSecurityPolicy: {
@@ -91,6 +92,9 @@ export function createApp(store: Store): Express {
     saveUninitialized: false
   }))
 
+  if (!production && config.E2E_AUTH_SECRET) {
+    app.use('/api/__e2e', createTestAuthRouter(config.E2E_AUTH_SECRET))
+  }
   app.use('/api', express.json({ limit: '1mb' }), graphqlHttpHandler)
   app.use('/', oauthRouter)
   app.use('/', appRouter)

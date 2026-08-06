@@ -55,10 +55,8 @@ export function allEmpty(...args:any[]) : boolean {
   })
 }
 
-export function sameOrNoOwnerID(_id1: Maybe<string | ObjectId>, _id2: Maybe<string | ObjectId>) : boolean {
-  const id1 = _id1 ? _id1.toString() : _id1
-  const id2 = _id2 ? _id2.toString() : _id2
-  return allEmpty(id1, id2) || id1 == id2
+export function sameOrNoOwnerID(id1: Maybe<string>, id2: Maybe<string>): boolean {
+  return allEmpty(id1, id2) || id1 === id2
 }
 
 export class ExtError extends Error {

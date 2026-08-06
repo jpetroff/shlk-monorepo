@@ -1,6 +1,6 @@
 # Development and deployment
 
-SHLK is a Bun workspace containing an Express/MongoDB API and one React/Vite
+SHLK is a Bun workspace containing an Express/SQLite API and one React/Vite
 frontend that can be built either as a website or a Manifest V3 Chrome
 extension.
 
@@ -14,9 +14,8 @@ extension.
   bun --version
   ```
 
-- MongoDB reachable through a `mongodb://` or `mongodb+srv://` URI. A local
-  MongoDB service is sufficient for development; the production Compose stack
-  below supplies its own authenticated MongoDB.
+- No external database service is required. The API creates and migrates a local
+  SQLite database on first development startup.
 - Chrome or another Chromium browser for extension development.
 - A Google OAuth web client. Add
   `http://localhost:8002/oauth/google/callback` as an authorized redirect URI.
@@ -37,7 +36,8 @@ Edit `.env` before starting the API:
 
 1. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to the local OAuth client.
 2. Generate `APP_SESSION_SECRET`, for example with `openssl rand -hex 32`.
-3. Set `MONGO_URI` to a running database.
+3. Keep `SQLITE_PATH=./data/shlk.sqlite` for the default local database, or choose
+   another writable path.
 4. Keep the documented localhost URLs for normal website development.
 
 `.env` and `.env.*` files are ignored. Never commit credentials. Bun loads env
@@ -60,6 +60,76 @@ bun run dev
 The Vite server proxies `/api`, `/oauth`, `/logout`, and `/rest` to the API.
 Both processes watch their source files.
 
+### Log in from an end-to-end test
+
+Google OAuth does not support automated sign-in from a controlled embedded
+browser. For local end-to-end tests, set a dedicated secret while starting the
+development server:
+
+```sh
+E2E_AUTH_SECRET="$(openssl rand -hex 32)" bun run dev
+```
+
+Then create a normal application session through the Vite-proxied API route:
+
+```ts
+const response = await request.post('/api/__e2e/login', {
+  headers: { 'x-e2e-auth': process.env.E2E_AUTH_SECRET! },
+  data: { email: 'playwright@example.test', name: 'Playwright User' }
+})
+if (!response.ok()) throw new Error(`Test login failed: ${response.status()}`)
+await request.storageState({ path: 'playwright/.auth/user.json' })
+```
+
+For a browser-only flow, navigate to the bootstrap route with the secret in the
+URL fragment:
+
+```ts
+const fragment = new URLSearchParams({
+  secret: process.env.E2E_AUTH_SECRET!,
+  email: 'playwright@example.test',
+  name: 'Playwright User',
+  redirect: '/app'
+})
+await page.goto(`/api/__e2e/browser#${fragment}`)
+await page.waitForURL('**/app')
+```
+
+#### Log in manually in a browser
+
+1. Add a secret of at least 32 characters to the ignored root `.env` file:
+
+   ```dotenv
+   E2E_AUTH_SECRET=0123456789abcdef0123456789abcdef
+   ```
+
+2. Restart the development server with `bun run dev`.
+
+3. Open the following URL on the website origin, replacing the example secret
+   with the value from `.env`:
+
+   ```text
+   http://localhost:5173/api/__e2e/browser#secret=0123456789abcdef0123456789abcdef&redirect=%2Fapp
+   ```
+
+This signs in as the default `playwright@example.test` user. To choose the
+email and display name, use URL-encoded `email` and `name` fragment parameters:
+
+```text
+http://localhost:5173/api/__e2e/browser#secret=YOUR_SECRET&email=me%40example.test&name=Test%20User&redirect=%2Fapp
+```
+
+Use `#secret=`, not `?secret=`, so the secret is not included in the initial
+HTTP request.
+
+The fragment is removed before the session request, and only same-origin redirect
+targets are accepted.
+
+The route is only mounted when `E2E_AUTH_SECRET` is non-empty and
+`NODE_ENV` is not `production`. Production configuration rejects the variable.
+Use an isolated local or CI database, generate a new secret for each environment,
+and never commit the secret or Playwright storage state.
+
 ## Environment variables
 
 ### API runtime
@@ -68,11 +138,12 @@ Both processes watch their source files.
 | --- | --- | --- |
 | `NODE_ENV` | No | Defaults to `development`; `bun run start` forces `production`. |
 | `PORT` | No | API listen port, default `8002`. |
-| `MONGO_URI` | Yes | MongoDB connection and session-store URI. |
+| `SQLITE_PATH` | No | SQLite database path; defaults to `./data/shlk.sqlite` from the API workspace. |
 | `APP_SESSION_SECRET` | Yes | Signs session IDs; production requires 32 or more non-placeholder characters. |
 | `GOOGLE_CLIENT_ID` | Yes | Google OAuth web-client ID. |
 | `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth web-client secret. |
 | `GOOGLE_REDIRECT_URI` | Yes | OAuth callback; production requires HTTPS. |
+| `E2E_AUTH_SECRET` | No | Enables the test-only `/api/__e2e/login` route outside production. |
 | `WEB_APP_URL` | Yes | Website origin used for CORS and OAuth/logout redirects; production requires HTTPS. |
 | `PUBLIC_SERVICE_URL` | Yes | Absolute base used when the API creates short URLs; production requires HTTPS. |
 | `DISPLAY_SERVICE_URL` | Yes | Human-readable short-link host shown in UI and API results. |
@@ -144,8 +215,8 @@ bun run test:web
 bun run --filter @shlk/web test:watch
 ```
 
-- API tests live in `apps/api/test`, import from `bun:test`, and run with the
-  BSON compatibility preload from the root `bunfig.toml`.
+- API tests live in `apps/api/test`, import from `bun:test`, and use an in-memory
+  migrated SQLite database.
 - Web tests live in `apps/web/test`, import from `vitest`, use jsdom and React
   Testing Library, and share browser mocks in `test/setup.ts`.
 - Name new files `*.test.ts` or `*.test.tsx`. Prefer behavior-level assertions,
@@ -186,14 +257,12 @@ permission and no localhost permission before distribution.
 
 ## Docker deployment
 
-Copy and fill the production template. Use URL-safe hexadecimal MongoDB
-passwords because Compose builds the connection URI from them.
+Copy and fill the production template. Compose stores the SQLite database in a
+local named volume mounted read/write into the otherwise read-only container.
 
 ```sh
 cp .env.docker.example .env.docker
 openssl rand -hex 32  # APP_SESSION_SECRET
-openssl rand -hex 32  # MONGO_ROOT_PASSWORD
-openssl rand -hex 32  # MONGO_APP_PASSWORD
 docker compose --env-file .env.docker config
 docker compose --env-file .env.docker up --build -d
 docker compose --env-file .env.docker ps
@@ -201,14 +270,15 @@ curl --fail http://127.0.0.1:8002/rest/ping
 ```
 
 The stack builds the `runtime` target, runs it as the unprivileged `bun` user,
-creates a dedicated MongoDB application user, waits for MongoDB health, and
-persists data in the `mongo-data` volume. MongoDB has no published host port.
+applies checked-in Drizzle migrations, and persists the database and WAL files in
+the `sqlite-data` volume.
 The app binds to `127.0.0.1:8002` by default.
 
 Put a one-hop TLS reverse proxy in front of that bind address before using login
 or serving users. Keep `TRUST_PROXY=1` only when that topology is accurate.
-Changing Mongo initialization credentials does not update an existing volume;
-perform an explicit credential rotation instead of deleting production data.
+Run exactly one writable application instance for a SQLite file. Back up and
+restore the volume as a database unit; never copy only the live main file without
+its WAL state.
 
 ### Export the store extension
 
@@ -242,8 +312,8 @@ separate release artifact.
   or enforced coverage thresholds.
 - ESLint disables several normally useful TypeScript safety rules, and the
   repository has no formatter/check script.
-- The Compose MongoDB service is a single persistent instance, not a replica set
-  or managed high-availability database.
+- The Compose SQLite volume has no built-in remote backup or high availability;
+  add and monitor Litestream separately when the deployment requires it.
 - TLS certificates, reverse-proxy configuration, database backups, secret
   management, centralized logs, metrics and alerts are outside this repository
   and must be supplied by the deployment environment.

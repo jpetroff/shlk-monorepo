@@ -1,7 +1,3 @@
-declare type ResultDoc<T> = import('mongoose').HydratedDocument<T>
-declare type QueryType<T> = import('mongoose').QueryWithHelpers<any, T>
-declare type ObjectId = import('mongoose').Types.ObjectId
-
 /* 
   [Common] Common query arguments
 */
@@ -24,7 +20,7 @@ declare interface QIShortlink {
     userTag?: string
     descriptionTag: string 
   }
-  owner?: ObjectId
+  owner?: string
   urlMetadata?: AnyObject
   siteTitle?: string
   siteDescription?: string
@@ -50,12 +46,12 @@ declare interface QISnoozeTimer {
 }
 
 /* 
-  [Shortlink] MongoDB object representation for query results
+  [Shortlink] Persistence-independent object returned by repositories
   */
 declare interface ShortlinkDocument extends QIShortlink {
-  _id?: ObjectId
-  createdAt?: string
-  updatedAt?: string
+  _id: string
+  createdAt: string
+  updatedAt: string
 }
 
 /* 
@@ -67,7 +63,7 @@ declare interface QIEditableShortlinkProps {
     userTag?: string
     descriptionTag: string 
   }
-  owner?: ObjectId
+  owner?: string
   urlMetadata?: AnyObject
   siteTitle?: string
   siteDescription?: string
@@ -114,10 +110,10 @@ declare interface UserObject extends UserProfile {
 
 
 /* 
-  [User] MongoDB object representation for query results
+  [User] Persistence-independent object returned by repositories
 */
 declare interface UserDocument extends UserObject {
-  _id: ObjectId
-  createdAt?: string
-  updatedAt?: string
+  _id: string
+  createdAt: string
+  updatedAt: string
 }
