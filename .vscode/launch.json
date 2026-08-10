@@ -1,0 +1,47 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Backend: Bun API",
+      "type": "bun",
+      "request": "launch",
+      "program": "${workspaceFolder}/apps/api/src/index.ts",
+      "cwd": "${workspaceFolder}/apps/api",
+      "runtimeArgs": [
+        "--env-file=${workspaceFolder}/.env.development"
+      ],
+      "watchMode": true,
+      "stopOnEntry": false
+    },
+    {
+      "name": "Frontend: Vite dev server",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bun --env-file=\"${workspaceFolder}/.env.development\" run dev",
+      "cwd": "${workspaceFolder}/apps/web"
+    },
+    {
+      "name": "Frontend: Attach Chromium",
+      "type": "chrome",
+      "request": "attach",
+      "browserAttachLocation": "workspace",
+      "address": "localhost",
+      "port": 9222,
+      "urlFilter": "http://localhost:5173/*",
+      "webRoot": "${workspaceFolder}/apps/web",
+      "sourceMaps": true,
+      "timeout": 30000
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug: Full stack",
+      "configurations": [
+        "Backend: Bun API",
+        "Frontend: Vite dev server",
+        "Frontend: Attach Chromium"
+      ],
+      "stopAll": true
+    }
+  ]
+}
