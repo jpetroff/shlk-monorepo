@@ -11,7 +11,7 @@ import config from '../../js/config'
 import { isAbortError, useAbortControllers } from '../../js/react-hooks'
 
 type Props = { className?: string }
-type Notice = { type: 'success' | 'error', message: string }
+type Notice = { type: 'success', message: string }
 
 export default function UserSettings({ className }: Props) {
   const context = useAppContext()
@@ -48,7 +48,8 @@ export default function UserSettings({ className }: Props) {
       }
     } catch (error) {
       if (!isAbortError(error) && sequence === saveSequence.current) {
-        setNotice({ type: 'error', message: 'Sorry, something did not go well. Please try again.' })
+        context.reportError(error, {
+          fallbackMessage: 'Sorry, something did not go well. Please try again.' })
       }
     } finally {
       if (sequence === saveSequence.current) {
@@ -87,9 +88,8 @@ export default function UserSettings({ className }: Props) {
         type={ButtonType.PRIMARY} label="Save profile settings" fullWidth />
     </div>
     <div className={`${globalClass}__snackbar-container`}>
-      {notice && <Snackbar type={notice.type === 'error' ? SnackbarType.ERROR : SnackbarType.MESSAGE}
-        className={`${globalClass}__profile-${notice.type}`} message={notice.message} canDismiss
-        timer={notice.type === 'success' ? 2000 : undefined} onDismiss={() => setNotice(null)} />}
+      {notice && <Snackbar type={SnackbarType.MESSAGE} className={`${globalClass}__profile-success`}
+        message={notice.message} canDismiss timer={2000} onDismiss={() => setNotice(null)} />}
     </div>
   </form>
 }

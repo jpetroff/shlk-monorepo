@@ -10,6 +10,7 @@ import DropdownMenu from '../src/components/dropdown-menu'
 import MenuItem from '../src/components/menu-item'
 import Snackbar, { SnackbarType } from '../src/components/snackbar'
 import ShortlinkListItem from '../src/components/shortlink-list-item'
+import { createTestAppContext } from './context-test-helpers'
 import HeroInput from '../src/components/hero-input'
 import AppContext from '../src/js/app.context'
 
@@ -71,7 +72,7 @@ it('keeps shortlink menu state on the action button instead of rendering attribu
 })
 
 it('names the hero URL input without rendering an extra label', () => {
-  render(<AppContext.Provider value={{ requestUpdate: vi.fn().mockResolvedValue(undefined) }}>
+  render(<AppContext.Provider value={createTestAppContext()}>
     <HeroInput name="URL" placeholder="Type or paste a link" onChange={vi.fn()}
       onSubmit={vi.fn()} onSnooze={vi.fn()} />
   </AppContext.Provider>)

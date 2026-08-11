@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import AppContext, { type AppContextT } from '../src/js/app.context'
 import UserSettings from '../src/apps/UserSettings'
 
+import { createTestAppContext } from './context-test-helpers'
 const updateLoggedInUser = vi.hoisted(() => vi.fn())
 
 vi.mock('../src/js/user.gql', () => ({
@@ -12,11 +13,9 @@ vi.mock('../src/js/user.gql', () => ({
 }))
 
 function renderSettings(requestUpdate = vi.fn().mockResolvedValue(undefined)) {
-  const value: AppContextT = {
-    user: { name: 'Alex', email: 'alex@example.com', userTag: 'alex' },
-    requestUpdate
-  }
-  return { requestUpdate, ...render(
+  const value = createTestAppContext({
+    user: { name: 'Alex', email: 'alex@example.com', userTag: 'alex' }, requestUpdate })
+  return { requestUpdate, reportError: value.reportError, ...render(
     <AppContext.Provider value={value}><UserSettings /></AppContext.Provider>
   ) }
 }
@@ -58,12 +57,13 @@ describe('UserSettings', () => {
   it('retains the entered value and exposes an alert after failure', async () => {
     const user = userEvent.setup()
     updateLoggedInUser.mockRejectedValue(new Error('offline'))
-    renderSettings()
+    const { reportError } = renderSettings()
     const input = screen.getByRole('textbox', { name: 'Personal shortlink prefix' })
     await user.clear(input)
     await user.type(input, 'keep-this')
     await user.click(screen.getByRole('button', { name: 'Save profile settings' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('Please try again')
+    await waitFor(() => expect(reportError).toHaveBeenCalledWith(expect.any(Error), {
+      fallbackMessage: 'Sorry, something did not go well. Please try again.' }))
     expect(input).toHaveValue('keep-this')
     expect(screen.getByRole('button', { name: 'Save profile settings' })).not.toBeDisabled()
   })

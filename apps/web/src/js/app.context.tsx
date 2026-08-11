@@ -3,6 +3,9 @@ import config from './config'
 
 import browserApi from './browser.api'
 import UserQuery from './user.gql'
+import AppError, { toAppError } from './app-error'
+import Snackbar, { SnackbarType } from '../components/snackbar'
+import styles from './styles-app-context.module.less'
 
 declare type LoginContext = {
   name: string,
@@ -19,24 +22,52 @@ declare type ExtensionContext = {
 export type AppContextT = {
   extension?: Maybe<ExtensionContext>,
   user?: Maybe<LoginContext>,
-  requestUpdate: () => Promise<void>
+  requestUpdate: () => Promise<void>,
+  error: AppError | null,
+  reportError: (error: unknown, options?: ReportErrorOptions) => AppError,
+  dismissError: () => void
 }
 
-export type AppContextState = Omit<AppContextT, 'requestUpdate'>
+export type AppContextState = Pick<AppContextT, 'extension' | 'user'>
+
+export type ReportErrorOptions = {
+  fallbackMessage?: string
+  action?: { label: string, onClick: () => void }
+  onDismiss?: () => void
+}
+
+type ErrorNotice = { error: AppError, action?: ReportErrorOptions['action'], onDismiss?: () => void }
 
 const AppContext = React.createContext<AppContextT | undefined>(undefined)
 
 type Props = {
-  initValue: Omit<AppContextT, 'requestUpdate'>
+  initValue: AppContextState
+  initError?: unknown
 }
 
 const AppContextProvider : React.FC<React.PropsWithChildren<Props>> = (
  {
   initValue,
+  initError,
   children
  } : React.PropsWithChildren<Props>
 ) => {
   const [ contextState, setContextState ] = React.useState(initValue)
+
+  const [ errorNotice, setErrorNotice ] = React.useState<ErrorNotice | null>(() => initError === undefined
+    ? null
+    : { error: toAppError(initError) })
+
+  const reportError = React.useCallback((error: unknown, options: ReportErrorOptions = {}) => {
+    const appError = toAppError(error, options.fallbackMessage)
+    setErrorNotice({ error: appError, action: options.action, onDismiss: options.onDismiss })
+    return appError
+  }, [])
+
+  const dismissError = React.useCallback(() => {
+    errorNotice?.onDismiss?.()
+    setErrorNotice(null)
+  }, [errorNotice])
 
   const requestUpdate = React.useCallback(async () => {
     const nextContextState = await getInitAppContext()
@@ -46,13 +77,23 @@ const AppContextProvider : React.FC<React.PropsWithChildren<Props>> = (
   const value : AppContextT = React.useMemo( () => {
     return {
       ...contextState,
-      requestUpdate
+      requestUpdate,
+      error: errorNotice?.error ?? null,
+      reportError,
+      dismissError
     }
-  }, [contextState, requestUpdate])
+  }, [contextState, dismissError, errorNotice, reportError, requestUpdate])
 
   return (
     <AppContext.Provider value={value}>
       {children}
+      {errorNotice && <div className={styles.errorContainer}>
+        <Snackbar key={errorNotice.error.message} type={SnackbarType.ERROR} message={errorNotice.error.message}
+          action={errorNotice.action?.label} onAction={() => {
+            dismissError()
+            errorNotice.action?.onClick()
+          }} canDismiss onDismiss={dismissError} />
+      </div>}
     </AppContext.Provider>
   )
 } 

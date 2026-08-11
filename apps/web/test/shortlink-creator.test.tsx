@@ -2,6 +2,8 @@ import * as React from 'react'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useShortlinkCreator } from '../src/apps/ShortlinkBar/use-shortlink-creator'
+import { createTestAppContext, TestAppContext } from './context-test-helpers'
+import type { AppContextT } from '../src/js/app.context'
 
 const mocks = vi.hoisted(() => ({
   createShortlink: vi.fn(),
@@ -39,8 +41,19 @@ vi.mock('../src/js/browser.api', () => ({
     sendMessage: mocks.sendMessage
   }
 }))
+let testContext: AppContextT
+
+function ContextWrapper({ children }: React.PropsWithChildren) {
+  return <TestAppContext value={testContext}>{children}</TestAppContext>
+}
+
+function StrictContextWrapper({ children }: React.PropsWithChildren) {
+  return <React.StrictMode><ContextWrapper>{children}</ContextWrapper></React.StrictMode>
+}
+
 
 beforeEach(() => {
+  testContext = createTestAppContext()
   vi.clearAllMocks()
   mocks.setStorage.mockResolvedValue(undefined)
   mocks.awaitStorage.mockResolvedValue([])
@@ -52,9 +65,7 @@ describe('useShortlinkCreator', () => {
     mocks.createShortlink.mockResolvedValue({
       _id: 'one', location: 'https://example.com', hash: 'abc123'
     })
-    const { result } = renderHook(() => useShortlinkCreator('', 'alex', 3), {
-      wrapper: React.StrictMode
-    })
+    const { result } = renderHook(() => useShortlinkCreator('', 'alex', 3), { wrapper: StrictContextWrapper })
     let returned: string | undefined
     await act(async () => {
       returned = await result.current.submitLocation('example.com')
@@ -67,9 +78,25 @@ describe('useShortlinkCreator', () => {
     expect(result.current.state.result?.hash).toBe('abc123')
   })
 
+  it('reports an invalid URL through app context instead of rejecting the event handler', async () => {
+    const { result } = renderHook(() => useShortlinkCreator('', 'alex', 3), { wrapper: ContextWrapper })
+
+    let returned: string | undefined
+    await act(async () => {
+      returned = await result.current.submitLocation('not a valid URL ???')
+    })
+
+    expect(returned).toBeUndefined()
+    expect(testContext.reportError).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'AppError', code: 'INVALID_URL'
+    }))
+    expect(result.current.state.createPhase).toBe('error')
+    expect(mocks.createShortlink).not.toHaveBeenCalled()
+  })
+
   it('uses a cached result without issuing a network request', async () => {
     mocks.checkShortlink.mockReturnValue({ location: 'https://cached.example', hash: 'cached' })
-    const { result } = renderHook(() => useShortlinkCreator('', 'alex', 3))
+    const { result } = renderHook(() => useShortlinkCreator('', 'alex', 3), { wrapper: ContextWrapper })
     let returned: string | undefined
     await act(async () => {
       returned = await result.current.submitLocation('https://cached.example')
@@ -91,7 +118,7 @@ describe('useShortlinkCreator', () => {
         else resolveSecond = resolve
       })
     })
-    const { result } = renderHook(() => useShortlinkCreator('', 'alex', 3))
+    const { result } = renderHook(() => useShortlinkCreator('', 'alex', 3), { wrapper: ContextWrapper })
     let first!: Promise<string | undefined>
     let second!: Promise<string | undefined>
     await act(async () => {
@@ -118,7 +145,7 @@ describe('useShortlinkCreator', () => {
     mocks.createShortlinkDescriptor.mockImplementation(() => new Promise<ShortlinkDocument>((resolve) => {
       descriptorResolvers.push(resolve)
     }))
-    const { result } = renderHook(() => useShortlinkCreator('', 'alex', 3))
+    const { result } = renderHook(() => useShortlinkCreator('', 'alex', 3), { wrapper: ContextWrapper })
     await act(async () => { await result.current.submitLocation('example.com') })
     act(() => result.current.dispatch({ type: 'descriptor', value: 'first' }))
     await act(async () => { vi.advanceTimersByTime(500); await Promise.resolve() })

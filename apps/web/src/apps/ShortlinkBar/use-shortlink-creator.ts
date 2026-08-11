@@ -5,10 +5,12 @@ import linkTools from '../../js/link.tools'
 import browserApi from '../../js/browser.api'
 import { modifyURLSlug, setCookie } from '../../js/utils'
 import { isAbortError, useAbortControllers, useDebouncedValue } from '../../js/react-hooks'
+import { useAppContext } from '../../js/app.context'
+import AppError from '../../js/app-error'
 
 export type CreatorResult = Pick<ShortlinkDocument, 'location' | 'hash' | 'descriptor'>
 type Phase = 'idle' | 'loading' | 'error'
-export type CreatorNotice = { type: 'success' | 'error', message: string }
+export type CreatorNotice = { type: 'success', message: string }
 export type CreatorState = {
   location: string
   result: CreatorResult | null
@@ -24,10 +26,10 @@ export type CreatorAction =
   | { type: 'location', value: string }
   | { type: 'create-loading' }
   | { type: 'result', result: CreatorResult, descriptorDirty?: boolean }
-  | { type: 'create-error', message: string }
+  | { type: 'create-error' }
   | { type: 'descriptor', value: string }
   | { type: 'descriptor-loading' }
-  | { type: 'descriptor-error', message: string }
+  | { type: 'descriptor-error' }
   | { type: 'descriptor-clear' }
   | { type: 'snooze-options', value: boolean }
   | { type: 'notice', notice: CreatorNotice | null }
@@ -42,23 +44,20 @@ export function creatorReducer(state: CreatorState, action: CreatorAction): Crea
       descriptionTag: action.result.descriptor?.descriptionTag ?? state.descriptionTag,
       userTag: action.result.descriptor?.userTag ?? state.userTag,
       descriptorDirty: action.descriptorDirty ?? false, createPhase: 'idle', descriptorPhase: 'idle', notice: null }
-    case 'create-error': return { ...state, createPhase: 'error', notice: { type: 'error', message: action.message } }
+    case 'create-error': return { ...state, createPhase: 'error', notice: null }
     case 'descriptor': return { ...state, descriptionTag: modifyURLSlug(action.value), descriptorDirty: true,
       descriptorPhase: action.value ? 'loading' : 'idle', notice: null }
     case 'descriptor-loading': return { ...state, descriptorPhase: 'loading' }
-    case 'descriptor-error': return { ...state, descriptorPhase: 'error', notice: { type: 'error', message: action.message } }
+    case 'descriptor-error': return { ...state, descriptorPhase: 'error', notice: null }
     case 'descriptor-clear': return { ...state, descriptorDirty: false, descriptorPhase: 'idle' }
     case 'snooze-options': return { ...state, showSnoozeOptions: action.value }
     case 'notice': return { ...state, notice: action.notice }
   }
 }
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
-}
-
 export function useRecentShortlinks(limit: number) {
   const [items, setItems] = React.useState<TCachedLink[]>([])
+  const { reportError } = useAppContext()
   const [loading, setLoading] = React.useState(false)
   const sequence = React.useRef(0)
   const refresh = React.useCallback(async () => {
@@ -68,10 +67,14 @@ export function useRecentShortlinks(limit: number) {
       await Cache.setStorage()
       const storage = await Cache.awaitStorage()
       if (request === sequence.current) setItems(storage.slice(0, limit))
+    } catch (error) {
+      if (request === sequence.current) {
+        reportError(error, { fallbackMessage: 'Could not load your recent shortlinks' })
+      }
     } finally {
       if (request === sequence.current) setLoading(false)
     }
-  }, [limit])
+  }, [limit, reportError])
   React.useEffect(() => {
     void refresh()
     return () => { ++sequence.current }
@@ -80,6 +83,7 @@ export function useRecentShortlinks(limit: number) {
 }
 
 export function useShortlinkCreator(initialLocation: string, defaultUserTag: string, historyLimit: number) {
+  const { reportError } = useAppContext()
   const [state, dispatch] = React.useReducer(creatorReducer, {
     location: initialLocation, result: null, userTag: defaultUserTag, descriptionTag: '',
     descriptorDirty: false, createPhase: 'idle', descriptorPhase: 'idle',
@@ -103,13 +107,12 @@ export function useShortlinkCreator(initialLocation: string, defaultUserTag: str
 
   const submitLocation = React.useCallback(async (providedLocation?: string): Promise<string | undefined> => {
     const rawLocation = providedLocation ?? stateRef.current.location
-    const location = linkTools.fixUrl(rawLocation.trim())
-    if (!location) return
     const sequence = ++createSequence.current
-    const controller = nextController('create')
-    abortController('descriptor')
     dispatch({ type: 'create-loading' })
     try {
+      const location = linkTools.fixUrl(rawLocation.trim())
+      const controller = nextController('create')
+      abortController('descriptor')
       await Cache.awaitStorage()
       const cached = Cache.checkShortlink({ location })
       if (cached?.hash) {
@@ -118,15 +121,19 @@ export function useShortlinkCreator(initialLocation: string, defaultUserTag: str
         return linkTools.generateShortlinkFromHash(cached.hash)
       }
       const result = await Query.createShortlink(location, controller.signal)
-      if (!result?.hash) throw new Error(`A shortlink for '${location}' could not be created. Please try again.`)
+      if (!result?.hash) throw new AppError(`A shortlink for '${location}' could not be created. Please try again.`,
+        { code: 'EMPTY_SHORTLINK_RESULT', source: result })
       if (sequence !== createSequence.current) return
       await applyResult(result, true)
       return linkTools.generateShortlinkFromHash(result.hash)
     } catch (error) {
-      if (!isAbortError(error) && sequence === createSequence.current) dispatch({ type: 'create-error', message: errorMessage(error) })
+      if (!isAbortError(error) && sequence === createSequence.current) {
+        reportError(error)
+        dispatch({ type: 'create-error' })
+      }
       return undefined
     }
-  }, [abortController, applyResult, nextController])
+  }, [abortController, applyResult, nextController, reportError])
 
   React.useEffect(() => {
     const snapshot = stateRef.current
@@ -150,10 +157,13 @@ export function useShortlinkCreator(initialLocation: string, defaultUserTag: str
       ) return
       await applyResult(result, true)
     }).catch((error: unknown) => {
-      if (!isAbortError(error) && sequence === descriptorSequence.current) dispatch({ type: 'descriptor-error', message: errorMessage(error) })
+      if (!isAbortError(error) && sequence === descriptorSequence.current) {
+        reportError(error)
+        dispatch({ type: 'descriptor-error' })
+      }
     })
     return () => controller.abort()
-  }, [applyResult, debouncedDescription, nextController])
+  }, [applyResult, debouncedDescription, nextController, reportError])
 
   const snooze = React.useCallback(async (standardTimer: string) => {
     const snapshot = stateRef.current
@@ -170,9 +180,12 @@ export function useShortlinkCreator(initialLocation: string, defaultUserTag: str
         message: `Snoozed until ${(result.snooze?.description ?? '').toLowerCase()}: ${trimmed}` } })
       if (browserApi.isInit) { await browserApi.closeActiveTab(); await browserApi.sendMessage({ command: 'sync' }) }
     } catch (error) {
-      if (!isAbortError(error)) dispatch({ type: 'create-error', message: errorMessage(error) })
+      if (!isAbortError(error)) {
+        reportError(error)
+        dispatch({ type: 'create-error' })
+      }
     }
-  }, [nextController])
+  }, [nextController, reportError])
 
   return { state, dispatch, submitLocation, snooze, recentItems, recentLoading }
 }

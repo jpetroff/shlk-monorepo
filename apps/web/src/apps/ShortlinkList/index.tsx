@@ -89,6 +89,7 @@ function initialState(): ListState {
 
 export function useShortlinkList(limit: number, subsection: ShortlinkListSubsection) {
   const [state, dispatch] = React.useReducer(shortlinkListReducer, undefined, initialState)
+  const { reportError } = useAppContext()
   const debouncedSearch = useDebouncedValue(state.searchQuery, 150)
   const requestSequence = React.useRef(0)
   const { nextController, abortController } = useAbortControllers()
@@ -108,12 +109,17 @@ export function useShortlinkList(limit: number, subsection: ShortlinkListSubsect
       if (sequence === requestSequence.current) dispatch({ type: 'loaded', mode, items, limit })
     } catch (error) {
       if (!isAbortError(error) && sequence === requestSequence.current) {
-        dispatch({ type: 'failed', message: error instanceof Error ? error.message : 'Could not load your shortlinks' })
+        const appError = reportError(error, {
+          fallbackMessage: 'Could not load your shortlinks',
+          action: { label: 'Retry', onClick: () => void load('replace', 0) },
+          onDismiss: () => dispatch({ type: 'clear-error' })
+        })
+        dispatch({ type: 'failed', message: appError.message })
       }
     } finally {
       if (sequence === requestSequence.current) requestInFlight.current = false
     }
-  }, [debouncedSearch, limit, nextController, subsection])
+  }, [debouncedSearch, limit, nextController, reportError, subsection])
   React.useEffect(() => {
     void load('replace', 0)
     return () => {
@@ -140,13 +146,13 @@ export default function ShortlinkList({ limit = 30 }: Props) {
   const navigate = useNavigate()
   const appContext = useAppContext()
   const subsection = subsectionFromPath(location.pathname)
-  const { state, dispatch, append, retry, nextController } = useShortlinkList(limit, subsection)
+  const { state, dispatch, append, nextController } = useShortlinkList(limit, subsection)
   const grouped = React.useMemo(() => groupShortlinks(state.shortlinks, subsection), [state.shortlinks, subsection])
   const menuRef = React.useRef<HTMLDivElement>(null)
   const [menu, setMenu] = React.useState<MenuState>(closedMenu)
   const [selected, setSelected] = React.useState<ShortlinkDocument | null>(null)
   const [mutationLoading, setMutationLoading] = React.useState(false)
-  const [notice, setNotice] = React.useState<{ type: 'error' | 'success', message: string } | null>(null)
+  const [notice, setNotice] = React.useState<{ type: 'success', message: string } | null>(null)
   const globalClass = `${styles.wrapperClass}_shortlink-list-app`
   const listClasses = classNames(globalClass, { [`${globalClass}_loading`]: state.loadMode === 'replace' })
 
@@ -183,7 +189,9 @@ export default function ShortlinkList({ limit = 30 }: Props) {
       }
       closeMenu()
     } catch (error) {
-      if (!isAbortError(error)) setNotice({ type: 'error', message: error instanceof Error ? error.message : 'Could not update this shortlink' })
+      if (!isAbortError(error)) {
+        appContext.reportError(error, { fallbackMessage: 'Could not update this shortlink' })
+      }
     } finally {
       setMutationLoading(false)
     }
@@ -199,7 +207,9 @@ export default function ShortlinkList({ limit = 30 }: Props) {
       setSelected(null)
       setNotice({ type: 'success', message: 'Shortlink updated' })
     } catch (error) {
-      if (!isAbortError(error)) setNotice({ type: 'error', message: error instanceof Error ? error.message : 'Could not save this shortlink' })
+      if (!isAbortError(error)) {
+        appContext.reportError(error, { fallbackMessage: 'Could not save this shortlink' })
+      }
     } finally {
       setMutationLoading(false)
     }
@@ -247,11 +257,8 @@ export default function ShortlinkList({ limit = 30 }: Props) {
     {selected && <UrlEdit onChange={(value) => void saveShortlink(value)} onCancel={() => setSelected(null)}
       shortlink={selected} isLoading={mutationLoading} userContextName={appContext.user?.userTag ?? 'you'} />}
     <div className={`${globalClass}__snackbar-container`}>
-      {state.error && <Snackbar type={SnackbarType.ERROR} className={`${globalClass}__shortlink-list-error`}
-        message={state.error} action="Retry" onAction={retry} canDismiss onDismiss={() => dispatch({ type: 'clear-error' })} />}
-      {notice && <Snackbar type={notice.type === 'error' ? SnackbarType.ERROR : SnackbarType.MESSAGE}
-        className={`${globalClass}__shortlink-list-${notice.type}`} message={notice.message} canDismiss
-        timer={notice.type === 'success' ? 2000 : undefined} onDismiss={() => setNotice(null)} />}
+      {notice && <Snackbar type={SnackbarType.MESSAGE} className={`${globalClass}__shortlink-list-success`}
+        message={notice.message} canDismiss timer={2000} onDismiss={() => setNotice(null)} />}
     </div>
   </div>
 }

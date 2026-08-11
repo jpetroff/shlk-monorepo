@@ -1,6 +1,7 @@
 import * as _ from 'underscore'
 import constants from './constants'
 import config from './config'
+import AppError from './app-error'
 
 interface DescriptiveShortlink {
   userTag?: string
@@ -47,7 +48,7 @@ class LinkTools {
       if(this.validateURL(result)) return result
     }
 
-    throw new Error(`URL ${result} is not valid`)
+    throw new AppError(`URL ${result} is not valid`, { code: 'INVALID_URL', source: url })
   }
 
   /* 

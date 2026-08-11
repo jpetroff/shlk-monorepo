@@ -3,6 +3,7 @@ import { validateURL } from './utils'
 import config from './config'
 
 import GQLRequest from './request-wrapper.gql'
+import AppError from './app-error'
 
 
 class GQLShortlinkQuery {
@@ -41,7 +42,7 @@ class GQLShortlinkQuery {
 
   public async createShortlink (location: string, signal?: AbortSignal) : Promise<ShortlinkDocument | null> {
     if (validateURL(location) == false) {
-      throw new Error(`Not a valid URL: '${location}'`)
+      throw new AppError(`Not a valid URL: '${location}'`, { code: 'INVALID_URL', source: location })
     }
     const query = `
     mutation createShortlinkWithVars (

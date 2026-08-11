@@ -1,6 +1,9 @@
+import * as React from 'react'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ShortlinkListSubsection, useShortlinkList } from '../src/apps/ShortlinkList'
+import { createTestAppContext, TestAppContext } from './context-test-helpers'
+import type { AppContextT } from '../src/js/app.context'
 
 const getUserShortlinks = vi.hoisted(() => vi.fn())
 
@@ -12,8 +15,15 @@ const first: ShortlinkDocument = { _id: 'one', hash: '1', location: 'https://one
 const second: ShortlinkDocument = { _id: 'two', hash: '2', location: 'https://two.example' }
 const third: ShortlinkDocument = { _id: 'three', hash: '3', location: 'https://three.example' }
 
+let testContext: AppContextT
+
+function ContextWrapper({ children }: React.PropsWithChildren) {
+  return <TestAppContext value={testContext}>{children}</TestAppContext>
+}
+
 beforeEach(() => {
   getUserShortlinks.mockReset()
+  testContext = createTestAppContext()
   document.cookie = 'content-display=; Max-Age=0; path=/'
 })
 
@@ -22,7 +32,7 @@ describe('useShortlinkList', () => {
     getUserShortlinks
       .mockResolvedValueOnce([first, second])
       .mockResolvedValueOnce([third])
-    const { result } = renderHook(() => useShortlinkList(2, ShortlinkListSubsection.all))
+    const { result } = renderHook(() => useShortlinkList(2, ShortlinkListSubsection.all), { wrapper: ContextWrapper })
     await waitFor(() => expect(result.current.state.shortlinks).toHaveLength(2))
     expect(result.current.state.hasMore).toBe(true)
     act(() => result.current.append())
@@ -37,7 +47,7 @@ describe('useShortlinkList', () => {
     getUserShortlinks
       .mockResolvedValueOnce([first])
       .mockResolvedValueOnce([second])
-    const { result } = renderHook(() => useShortlinkList(30, ShortlinkListSubsection.all))
+    const { result } = renderHook(() => useShortlinkList(30, ShortlinkListSubsection.all), { wrapper: ContextWrapper })
     await waitFor(() => expect(result.current.state.shortlinks).toEqual([first]))
     act(() => result.current.dispatch({ type: 'search', value: 'two' }))
     expect(getUserShortlinks).toHaveBeenCalledTimes(1)
@@ -59,7 +69,7 @@ describe('useShortlinkList', () => {
     })
     const { result, rerender } = renderHook(
       ({ subsection }) => useShortlinkList(30, subsection),
-      { initialProps: { subsection: ShortlinkListSubsection.all } }
+      { initialProps: { subsection: ShortlinkListSubsection.all }, wrapper: ContextWrapper }
     )
     await waitFor(() => expect(getUserShortlinks).toHaveBeenCalledOnce())
     rerender({ subsection: ShortlinkListSubsection.snoozed })
@@ -77,7 +87,7 @@ describe('useShortlinkList', () => {
     getUserShortlinks
       .mockRejectedValueOnce(new Error('offline'))
       .mockResolvedValueOnce([first])
-    const { result } = renderHook(() => useShortlinkList(30, ShortlinkListSubsection.all))
+    const { result } = renderHook(() => useShortlinkList(30, ShortlinkListSubsection.all), { wrapper: ContextWrapper })
     await waitFor(() => expect(result.current.state.error).toBe('offline'))
     act(() => result.current.retry())
     await waitFor(() => expect(result.current.state.shortlinks).toEqual([first]))

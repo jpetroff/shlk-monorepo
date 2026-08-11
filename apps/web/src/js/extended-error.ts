@@ -1,10 +1,7 @@
 import * as _ from 'underscore'
+import AppError from './app-error'
 
-export type GracefulErrorType = {
-  message: string
-  code?: string
-  source?: AnyObject
-}
+export type GracefulErrorType = AppError
 
 class GracefulError {
   constructor() {}
@@ -12,16 +9,15 @@ class GracefulError {
   /* 
 
    */
-  public processGQLResponse(response: GraphQLResponse) : GracefulErrorType[] {
+  public processGQLResponse(response?: GraphQLResponse) : GracefulErrorType[] {
     const errorsResponseArray = response?.errors
     const result : GracefulErrorType[] = []
     if(errorsResponseArray && errorsResponseArray.length > 0) {
       _.each(errorsResponseArray, (item, index) => {
-        result.push( {
-          message: item.message,
+        result.push(new AppError(item.message, {
           code: item.extensions?.code ? String(item.extensions.code) : undefined,
           source: item || undefined
-        } )
+        }))
       })
     }
     return result

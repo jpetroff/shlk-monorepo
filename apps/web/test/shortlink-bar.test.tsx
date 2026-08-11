@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router'
 import AppContext, { type AppContextT } from '../src/js/app.context'
 import ShortlinkBar from '../src/apps/ShortlinkBar'
 
+import { createTestAppContext } from './context-test-helpers'
 const mocks = vi.hoisted(() => ({
   useCreator: vi.fn(),
   submitLocation: vi.fn(),
@@ -41,10 +42,7 @@ const creatorState = {
 }
 
 function renderBar(context: Partial<AppContextT> = {}, entry = '/') {
-  const value: AppContextT = {
-    requestUpdate: vi.fn().mockResolvedValue(undefined),
-    ...context
-  }
+  const value = createTestAppContext(context)
   return render(
     <React.StrictMode>
       <AppContext.Provider value={value}>

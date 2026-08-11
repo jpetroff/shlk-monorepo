@@ -40,7 +40,7 @@ describe('creatorReducer', () => {
 
   it('clears stale output and notices when the location changes', () => {
     const previous = { ...creatorState, result: { location: creatorState.location, hash: 'hash' },
-      notice: { type: 'error' as const, message: 'failed' } }
+      notice: { type: 'success' as const, message: 'saved' } }
     const next = creatorReducer(previous, { type: 'location', value: ' https://next.example ' })
     expect(next.location).toBe('https://next.example')
     expect(next.result).toBeNull()

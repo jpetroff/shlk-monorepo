@@ -121,8 +121,7 @@ export default function ShortlinkBar({ onMobileInputModeChange }: Props) {
         </>}
         {state.showSnoozeOptions && <SnoozeList onSnooze={(value) => void creator.snooze(value)} />}
         <div className={`${globalClass}__snackbar-container`}>
-          {state.notice && <Snackbar type={state.notice.type === 'error' ? SnackbarType.ERROR : SnackbarType.MESSAGE}
-            message={state.notice.message} canDismiss timer={state.notice.type === 'success' ? 2000 : undefined}
+          {state.notice && <Snackbar type={SnackbarType.MESSAGE} message={state.notice.message} canDismiss timer={2000}
             onDismiss={() => dispatch({ type: 'notice', notice: null })} />}
         </div>
       </div>

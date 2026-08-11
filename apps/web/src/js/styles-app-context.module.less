@@ -1,0 +1,16 @@
+@import (reference) '../css/_constants.less';
+
+:local(.errorContainer) {
+  position: fixed;
+  z-index: @z-popup-top + 1;
+  bottom: 2.75rem;
+  left: 50%;
+  width: ~"calc(100% - 2.5rem)";
+  max-width: 30rem;
+  transform: translateX(-50%);
+
+  > * {
+    width: 100%;
+    min-width: auto;
+  }
+}

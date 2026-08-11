@@ -149,15 +149,8 @@ class ShortlinkCache {
   }
 
   private async getAllFromRemote( limit: number = 30 ) : Promise<Array<TCachedLink>> {
-    try {
-      const storageContent = await GQLShortlinkQuery.getUserShortlinks({
-        limit
-      })
-      return storageContent as Array<TCachedLink>
-    } catch(error: any) {
-      console.error(error)
-      return []
-    }
+    const storageContent = await GQLShortlinkQuery.getUserShortlinks({ limit })
+    return storageContent as Array<TCachedLink>
   }
 }
 
