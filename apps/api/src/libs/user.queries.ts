@@ -3,6 +3,7 @@ import { db } from '../db/client'
 import { toUser } from '../db/adapters'
 import { users } from '../db/schema'
 import { checkBanlist } from './ban.queries'
+import { modifyURLSlug } from './utils'
 
 export const UserProfileFields: (keyof UserProfile)[] = ['email', 'name', 'avatar', 'userTag']
 export const UserObjectFields: (keyof UserObject)[] = [
@@ -29,7 +30,7 @@ export async function createOrUpdateUser(args: UserObject): Promise<UserDocument
       email: args.email,
       name,
       avatar: hasValue(args.avatar) ? String(args.avatar) : null,
-      userTag: hasValue(args.userTag) ? String(args.userTag) : name.toLowerCase(),
+      userTag: hasValue(args.userTag) ? String(args.userTag) : modifyURLSlug(name.toLowerCase()),
       idToken: hasValue(args.id_token) ? String(args.id_token) : null,
       accessToken: hasValue(args.access_token) ? String(args.access_token) : null,
       refreshToken: hasValue(args.refresh_token) ? String(args.refresh_token) : null,
@@ -43,12 +44,12 @@ export async function createOrUpdateUser(args: UserObject): Promise<UserDocument
   const updates: Partial<typeof users.$inferInsert> = { updatedAt: now }
   if (hasValue(args.name)) updates.name = String(args.name)
   if (hasValue(args.avatar)) updates.avatar = String(args.avatar)
-  if (hasValue(args.userTag)) updates.userTag = String(args.userTag)
+  if (hasValue(args.userTag)) updates.userTag = modifyURLSlug(String(args.userTag))
   if (hasValue(args.id_token)) updates.idToken = String(args.id_token)
   if (hasValue(args.access_token)) updates.accessToken = String(args.access_token)
   if (hasValue(args.refresh_token)) updates.refreshToken = String(args.refresh_token)
   if (hasValue(args.ip)) updates.ip = String(args.ip)
-  if (!existing.userTag) updates.userTag = (updates.name ?? existing.name).toLowerCase()
+  if (!existing.userTag) updates.userTag = modifyURLSlug((updates.name ?? existing.name).toLowerCase())
 
   const row = db.update(users)
     .set(updates)

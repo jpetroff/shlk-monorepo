@@ -29,7 +29,8 @@ export default function Snackbar({
       aria-live={type === SnackbarType.ERROR ? 'assertive' : 'polite'}>
       <div className={`${globalClass}__content-wrapper`}>
         <div className={`${globalClass}__message`}>{message}</div>
-        {canDismiss && <button type="button" className={`${globalClass}__dismiss`}
+        {canDismiss && 
+        <button type="button" className={`${globalClass}__dismiss`}
           aria-label="Dismiss notification" onClick={() => setVisible(false)}>
           <Cross_16 aria-hidden="true" />
         </button>}
