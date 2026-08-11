@@ -1,5 +1,4 @@
 import './modernizr_build.js'
-import '../css/main.less'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router/dom'
 import config from './config'
