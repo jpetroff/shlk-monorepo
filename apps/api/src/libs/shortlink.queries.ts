@@ -283,9 +283,9 @@ export async function updateShortlink(
 
   if (requested.location) {
     const [urlMetadata, siteTitle, siteDescription] = await fetchMetadata(location)
-    updates.urlMetadata = urlMetadata
-    updates.siteTitle = siteTitle
-    updates.siteDescription = siteDescription
+    if (!('urlMetadata' in requested)) updates.urlMetadata = urlMetadata
+    if (!('siteTitle' in requested)) updates.siteTitle = siteTitle
+    if (!('siteDescription' in requested)) updates.siteDescription = siteDescription
   }
 
   updates.searchIndex = buildSearchIndex({

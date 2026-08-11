@@ -9,7 +9,8 @@ import { shortlinks, users } from '../src/db/schema'
 import {
   deleteShortlink,
   queryAndDeleteShortlinkSnoozeTimer,
-  queryShortlinks
+  queryShortlinks,
+  updateShortlink
 } from '../src/libs/shortlink.queries'
 import { createOrUpdateUser } from '../src/libs/user.queries'
 import { createTestAuthRouter } from '../src/libs/test-auth.routes'
@@ -153,6 +154,38 @@ describe('SQLite repositories', () => {
     expect(sqlite.query(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'users'"
     ).get()).not.toBeNull()
+  })
+
+  test('preserves explicitly edited metadata when changing the location', async () => {
+    const owner = db.select().from(users)
+      .where(eq(users.email, 'first@example.com'))
+      .get()!
+    const now = new Date().toISOString()
+    db.insert(shortlinks).values({
+      id: 'edited-metadata-link',
+      hash: 'meta01',
+      location: 'https://example.com/original',
+      ownerId: owner.id,
+      createdAt: now,
+      updatedAt: now
+    }).run()
+
+    const updated = await updateShortlink(owner.id, {
+      id: 'edited-metadata-link',
+      shortlink: {
+        location: 'http://127.0.0.1:1/updated',
+        urlMetadata: { title: 'User metadata' },
+        siteTitle: 'User title',
+        siteDescription: 'User description'
+      }
+    })
+
+    expect(updated).toMatchObject({
+      location: 'http://127.0.0.1:1/updated',
+      urlMetadata: { title: 'User metadata' },
+      siteTitle: 'User title',
+      siteDescription: 'User description'
+    })
   })
 
   test('scopes timer deletion and link deletion to the owner', async () => {
