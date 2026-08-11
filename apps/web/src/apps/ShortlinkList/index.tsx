@@ -4,7 +4,7 @@ import Input from '../../components/input'
 import ShortlinkListItem from '../../components/shortlink-list-item'
 import shortlinkQueries from '../../js/shortlink.gql'
 import classNames from 'classnames'
-import dateTimeTools, { DateGrouped } from '../../js/datetime.tools'
+import dateTimeTools, { DateGrouped, timestampValue } from '../../js/datetime.tools'
 import RadioGroup from '../../components/radio-group'
 import DropdownMenu from '../../components/dropdown-menu'
 import MenuItem from '../../components/menu-item'
@@ -38,7 +38,7 @@ export function groupShortlinks(shortlinks: ShortlinkDocument[], subsection: Sho
     if (index === 0 || grouped[index - 1].group !== item.group) {
       rows.push({ isSubheader: true, group: item.group, key: `group-${item.group}` })
     }
-    rows.push({ ...item, timestamp: Number(item.createdAt ?? item.updatedAt ?? 0) })
+    rows.push({ ...item, timestamp: timestampValue(item.createdAt ?? item.updatedAt ?? 0) })
   })
   return rows
 }

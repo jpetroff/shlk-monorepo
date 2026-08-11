@@ -4,6 +4,13 @@ import dayjs from 'dayjs'
 
 export type DateGrouped<T> = T & {group: string}
 
+export function timestampValue(value: string | number): number {
+  if (typeof value === 'number') return value
+
+  const numericValue = Number(value)
+  return Number.isNaN(numericValue) ? Date.parse(value) : numericValue
+}
+
 export default {
   increaseDays(value: number, date: Date = new Date()) {
     const result = new Date(date)
@@ -15,10 +22,12 @@ export default {
     const result : DateGrouped<T>[] = []
 
     _.each(items, (item) => {
-      const value = valueByPath(item as AnyObject, timestampKey) as Maybe<string>
-      if(!value) return
+      const value = valueByPath(item as AnyObject, timestampKey) as Maybe<string | number>
+      if(value === undefined || value === null || value === '') return
       try {
-        const itemDate : dayjs.Dayjs = dayjs(parseInt(value as string))
+        const timestamp = timestampValue(value)
+        if(Number.isNaN(timestamp)) return
+        const itemDate : dayjs.Dayjs = dayjs(timestamp)
         const base : dayjs.Dayjs = dayjs(baseDate)
 
         // console.log(value, itemDate)

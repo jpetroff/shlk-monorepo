@@ -90,10 +90,11 @@ describe('shortlinkListReducer', () => {
 })
 
 it('groups cloned records and keeps server documents immutable', () => {
-  const item: ShortlinkDocument = { _id: 'one', hash: '1', location: 'https://one.example', createdAt: String(Date.now()) }
+  const createdAt = new Date().toISOString()
+  const item: ShortlinkDocument = { _id: 'one', hash: '1', location: 'https://one.example', createdAt }
   const rows = groupShortlinks([item], ShortlinkListSubsection.all)
   expect(rows[0].isSubheader).toBe(true)
-  expect(rows[1]).toMatchObject({ _id: 'one', group: 'Today' })
+  expect(rows[1]).toMatchObject({ _id: 'one', group: 'Today', timestamp: Date.parse(createdAt) })
   expect(rows[1]).not.toBe(item)
   expect(item).not.toHaveProperty('group')
 })
