@@ -7,10 +7,11 @@
 ## Architecture
 
 - **Bootstrap and routing**
-  - `StrictMode` wraps the application.
-  - `AppContextProvider` owns `user`, `extension`, `requestUpdate()`, and global error presentation. See [Web error handling](./web-error-handling.md).
+  - `StrictMode` wraps the application. The web target mounts immediately and resolves authentication in the provider; the extension deliberately resolves its active tab, user, and initial cache before mounting. See [Web loading process](./web-loading-process.md).
+  - `AppContextProvider` owns `user`, `authStatus`, `extension`, `requestUpdate()`, and global error presentation. See [Web error handling](./web-error-handling.md).
   - `useAppContext()` is required; using the context outside its provider throws immediately.
-  - Pages use React Router hooks directly and authenticated pages return `<Navigate replace>` when no user is available.
+  - Pages use React Router hooks directly. Protected pages must show the loading shell while authentication is checking, then render or return `<Navigate replace>`.
+  - Home and route errors are eager; login, authenticated pages, profile, and legal content are lazy route chunks under one Suspense fallback.
   - Every route has an accessible error boundary, with a separate accessible 404 route.
 
 - **Shared hooks**
@@ -41,21 +42,27 @@
 
 ```mermaid
 flowchart TD
-    A["index.tsx"] --> B["React StrictMode"]
-    B --> C["AppContextProvider"]
-    C --> D["RouterProvider"]
-    D --> E{"Matched route"}
-    E --> F["Home"]
-    E --> G["My Links / Snoozed"]
-    E --> H["Profile"]
-    E --> I["Login / Legal"]
-    E --> J["Accessible route error or 404"]
-    F --> K["ShortlinkBar"]
-    G --> L["ShortlinkList"]
-    H --> M["UserSettings"]
+    A["index.html loading shell"] --> B["index.tsx"]
+    B --> C{"Target"}
+    C -- Web --> D["Mount React immediately"]
+    C -- Extension --> E["Await active tab, user, and initial cache"]
+    E --> D
+    D --> F["StrictMode + AppContextProvider"]
+    F --> G["RouterProvider + Suspense"]
+    G --> H{"Matched route"}
+    H --> I["Eager Home"]
+    H --> J["Lazy route chunk"]
+    H --> K["Eager route error / 404"]
+    F --> L["Async web authentication"]
+    L --> M["Cache mode and account UI update"]
+    I --> N["ShortlinkBar"]
+    J --> O["Login, list, profile, or legal UI"]
 ```
 
-The provider is initialized before route content renders. Feature components read context and router state directly instead of receiving injected `context`, `router`, or `extension` props.
+Only the extension provider is initialized before route content renders. The web
+provider begins with `authStatus: 'checking'`; feature components read context
+and router state directly instead of receiving injected `context`, `router`, or
+`extension` props.
 
 ## Shortlink creation and snooze flow
 

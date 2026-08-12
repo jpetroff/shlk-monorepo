@@ -31,19 +31,24 @@ strings, and arbitrary thrown values. Unknown values receive a safe fallback mes
 
 ### Requests
 
-`request-wrapper.gql.ts` normalizes both GraphQL failure forms:
+`request-wrapper.gql.ts` normalizes GraphQL, HTTP, parse, and transport failures:
 
 ```mermaid
 flowchart TD
-    A["HTTP response"] --> B{"data.errors?"}
-    B -- Yes --> C["First GraphQL error becomes AppError"]
-    B -- No --> D{"Axios rejected?"}
-    D -- "GraphQL payload" --> C
-    D -- "Network or other error" --> E["toAppError(error, fallback)"]
+    A["Fetch response"] --> B["Parse JSON"]
+    B --> C{"GraphQL errors?"}
+    C -- Yes --> D["First GraphQL error becomes AppError"]
+    C -- No --> E{"HTTP status successful?"}
+    E -- No --> F["HTTP status AppError"]
+    E -- Yes --> G["Return data"]
+    H["Fetch rejects"] --> I{"AbortError?"}
+    I -- Yes --> J["Rethrow unchanged"]
+    I -- No --> K["toAppError(error, fallback)"]
 ```
 
 Callers therefore receive an `AppError` whether the server returned HTTP success
-with `errors`, an HTTP failure with GraphQL errors, or a transport failure.
+with `errors`, an HTTP failure with or without GraphQL errors, an invalid JSON
+response, or a transport failure. Cancellation remains an unchanged `AbortError`.
 
 ### Features
 
@@ -69,8 +74,11 @@ request sequence checks should also remain, so stale requests cannot publish err
 
 ### Startup
 
-Errors raised before React mounts are passed to `AppContextProvider` as `initError`.
-The provider displays them after mounting.
+Extension errors raised during its blocking bootstrap are passed to
+`AppContextProvider` as `initError` and displayed after mounting. The web app
+mounts first; a non-abort initialization failure settles authentication as
+anonymous and creates the same global error notice inside the provider. See
+[Web loading process](./web-loading-process.md).
 
 ## Showing a new error correctly
 
