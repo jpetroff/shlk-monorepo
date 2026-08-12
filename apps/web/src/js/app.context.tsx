@@ -17,6 +17,7 @@ declare type LoginContext = {
 
 declare type ExtensionContext = {
   activeTabUrl: string
+  activeTabId: number
 }
 
 export type AppContextT = {
@@ -114,7 +115,7 @@ export async function getInitAppContext(): Promise<AppContextState> {
   if(config.target == 'extension' && browserApi.isInit) {
     const activeTab = await browserApi.getTab(true)
     if(activeTab?.url) 
-      result.extension = { activeTabUrl: activeTab.url }
+      result.extension = { activeTabUrl: activeTab.url, activeTabId: activeTab.id }
   }
 
   // getting login data

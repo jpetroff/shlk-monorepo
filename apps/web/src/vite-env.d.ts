@@ -17,6 +17,9 @@ interface ImportMeta {
   readonly env: ImportMetaEnv
 }
 
+declare const __SHLK_EXTENSION_ID__: string
+declare const __SHLK_WEB_APP_ORIGIN__: string
+
 declare const Modernizr: {
   touchevents: boolean
   mq(query: string): boolean

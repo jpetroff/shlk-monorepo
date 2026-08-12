@@ -8,7 +8,7 @@
 
 - **Bootstrap and routing**
   - `StrictMode` wraps the application.
-  - `AppContextProvider` owns only `user`, `extension`, and the stable `requestUpdate()` function.
+  - `AppContextProvider` owns `user`, `extension`, `requestUpdate()`, and global error presentation. See [Web error handling](./web-error-handling.md).
   - `useAppContext()` is required; using the context outside its provider throws immediately.
   - Pages use React Router hooks directly and authenticated pages return `<Navigate replace>` when no user is available.
   - Every route has an accessible error boundary, with a separate accessible 404 route.
@@ -125,7 +125,7 @@ sequenceDiagram
     List->>Menu: Close and restore trigger focus
 ```
 
-Replacement and append loading are independent. Append requests cannot overlap, and late responses cannot overwrite newer route or search results. Errors remain recoverable through Retry, while empty state is shown only after a completed successful load.
+Replacement and append loading are independent. Append requests cannot overlap, and late responses cannot overwrite newer route or search results. Errors are reported through app context and remain recoverable through Retry, while empty state is shown only after a completed successful load.
 
 ## Profile save flow
 
@@ -150,7 +150,8 @@ sequenceDiagram
     else Failure
         API-->>Form: Error
         Form->>Form: Retain entered value
-        Form->>Notice: Announce recoverable error
+        Form->>Context: reportError(error)
+        Context->>Notice: Announce recoverable error
     end
     Form->>Form: Clear pending in guarded finally
 ```

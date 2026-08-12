@@ -155,6 +155,7 @@ class GQLShortlinkQuery {
         _id
         hash
         location
+        siteTitle
         snooze {
           awake
           description

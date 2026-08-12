@@ -11,16 +11,22 @@ const mocks = vi.hoisted(() => ({
   submitLocation: vi.fn(),
   snooze: vi.fn(),
   dispatch: vi.fn(),
-  copy: vi.fn()
+  copy: vi.fn(),
+  probeExtension: vi.fn()
 }))
 
 vi.mock('../src/apps/ShortlinkBar/use-shortlink-creator', () => ({
   useShortlinkCreator: mocks.useCreator
 }))
 vi.mock('../src/js/clipboard.tools', () => ({ default: { copy: mocks.copy } }))
+vi.mock('../src/js/browser.api', () => ({ default: { probeSnoozeExtension: mocks.probeExtension } }))
 vi.mock('../src/components/hero-input', () => ({
-  default: ({ value, onSubmit }: { value: string, onSubmit: (value: string) => void }) =>
+  default: ({ value, onSubmit, onSnooze }: {
+    value: string, onSubmit: (value: string) => void, onSnooze: () => void
+  }) => <>
     <button type="button" onClick={() => onSubmit(value)}>Submit {value}</button>
+    <button type="button" onClick={onSnooze}>Snooze</button>
+  </>
 }))
 vi.mock('../src/components/shortlink-display', () => ({ default: () => <div data-testid="shortlink-display" /> }))
 vi.mock('../src/components/shortlink-slug-input', () => ({ default: () => <div data-testid="slug-input" /> }))
@@ -55,6 +61,7 @@ function renderBar(context: Partial<AppContextT> = {}, entry = '/') {
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.submitLocation.mockResolvedValue('https://shlk.test/returned')
+  mocks.probeExtension.mockResolvedValue(false)
   mocks.useCreator.mockImplementation((initialLocation: string) => ({
     state: { ...creatorState, location: initialLocation },
     dispatch: mocks.dispatch,
@@ -67,7 +74,7 @@ beforeEach(() => {
 
 describe('ShortlinkBar initialization', () => {
   it('prefills the extension active tab ahead of the query and does not auto-submit it', async () => {
-    renderBar({ extension: { activeTabUrl: 'https://active.example' } },
+    renderBar({ extension: { activeTabUrl: 'https://active.example', activeTabId: 42 } },
       '/?l=https%3A%2F%2Fquery.example')
     expect(mocks.useCreator).toHaveBeenCalledWith('https://active.example', 'someone', 3)
     await Promise.resolve()
@@ -93,4 +100,36 @@ it('copies the value returned by shortcut submission and cleans up its global li
   view.unmount()
   fireEvent.keyDown(window, { code: 'KeyD', ctrlKey: true })
   expect(mocks.submitLocation).not.toHaveBeenCalled()
+})
+
+
+describe('website snooze availability', () => {
+  const user = { name: 'Alex', email: 'alex@example.com', predefinedTimers: [] }
+
+  function useVisibleSnoozeState() {
+    mocks.useCreator.mockReturnValue({
+      state: { ...creatorState, location: 'https://example.com', showSnoozeOptions: true },
+      dispatch: mocks.dispatch,
+      submitLocation: mocks.submitLocation,
+      snooze: mocks.snooze,
+      recentItems: [],
+      recentLoading: false
+    })
+  }
+
+  it('shows installation guidance instead of timers when the extension is unavailable', async () => {
+    useVisibleSnoozeState()
+    const view = renderBar({ user })
+    fireEvent.click(view.getByRole('button', { name: 'Snooze' }))
+    expect(await view.findByText(/Install or update the shlk.cc Chrome extension/)).toBeInTheDocument()
+    expect(view.queryByTestId('snooze-list')).not.toBeInTheDocument()
+  })
+
+  it('shows snooze times only after a compatible extension replies', async () => {
+    useVisibleSnoozeState()
+    mocks.probeExtension.mockResolvedValue(true)
+    const view = renderBar({ user })
+    fireEvent.keyDown(window, { code: 'KeyS', ctrlKey: true })
+    expect(await view.findByTestId('snooze-list')).toBeInTheDocument()
+  })
 })

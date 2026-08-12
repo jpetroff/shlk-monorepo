@@ -9,19 +9,21 @@ const mocks = vi.hoisted(() => ({
   createShortlink: vi.fn(),
   createShortlinkDescriptor: vi.fn(),
   createTimer: vi.fn(),
+  deleteTimer: vi.fn(),
   checkShortlink: vi.fn(),
   setStorage: vi.fn(),
   awaitStorage: vi.fn(),
   storeShortlink: vi.fn(),
-  closeActiveTab: vi.fn(),
-  sendMessage: vi.fn()
+  closeTab: vi.fn(),
+  scheduleSnooze: vi.fn()
 }))
 
 vi.mock('../src/js/shortlink.gql', () => ({
   default: {
     createShortlink: mocks.createShortlink,
     createShortlinkDescriptor: mocks.createShortlinkDescriptor,
-    createOrUpdateShortlinkTimer: mocks.createTimer
+    createOrUpdateShortlinkTimer: mocks.createTimer,
+    deleteShortlinkSnoozeTimer: mocks.deleteTimer
   }
 }))
 
@@ -37,8 +39,8 @@ vi.mock('../src/js/cache', () => ({
 vi.mock('../src/js/browser.api', () => ({
   default: {
     isInit: false,
-    closeActiveTab: mocks.closeActiveTab,
-    sendMessage: mocks.sendMessage
+    closeTab: mocks.closeTab,
+    scheduleSnooze: mocks.scheduleSnooze
   }
 }))
 let testContext: AppContextT
@@ -58,6 +60,10 @@ beforeEach(() => {
   mocks.setStorage.mockResolvedValue(undefined)
   mocks.awaitStorage.mockResolvedValue([])
   mocks.checkShortlink.mockReturnValue(null)
+  mocks.scheduleSnooze.mockResolvedValue({ ok: true, protocol: 1 })
+  mocks.closeTab.mockResolvedValue(undefined)
+  mocks.deleteTimer.mockResolvedValue([])
+
 })
 
 describe('useShortlinkCreator', () => {
@@ -161,5 +167,42 @@ describe('useShortlinkCreator', () => {
     await act(async () => { await Promise.resolve() })
     expect(result.current.state.result?.descriptor?.descriptionTag).toBe('second')
     vi.useRealTimers()
+  })
+
+  it('persists, confirms, and then closes the captured extension tab', async () => {
+    testContext = createTestAppContext({ extension: {
+      activeTabUrl: 'https://example.com', activeTabId: 42
+    } })
+    mocks.createTimer.mockResolvedValue({
+      _id: 'one', location: 'https://example.com', hash: 'one', siteTitle: 'Example',
+      snooze: { awake: 2_000_000_000_000, description: 'Later today' }
+    })
+    const { result } = renderHook(() => useShortlinkCreator('https://example.com', 'alex', 3), {
+      wrapper: ContextWrapper
+    })
+    await act(async () => { await result.current.snooze('today_18') })
+    expect(mocks.scheduleSnooze).toHaveBeenCalledWith({
+      id: 'one', location: 'https://example.com', awake: 2_000_000_000_000, siteTitle: 'Example'
+    })
+    expect(mocks.closeTab).toHaveBeenCalledWith(42)
+    expect(mocks.scheduleSnooze.mock.invocationCallOrder[0]).toBeLessThan(mocks.closeTab.mock.invocationCallOrder[0])
+    expect(result.current.state.location).toBe('')
+  })
+
+  it('rolls the API timer back and retains the URL when extension scheduling fails', async () => {
+    mocks.createTimer.mockResolvedValue({
+      _id: 'one', location: 'https://example.com', hash: 'one',
+      snooze: { awake: 2_000_000_000_000, description: 'Later today' }
+    })
+    mocks.scheduleSnooze.mockRejectedValue(new Error('extension unavailable'))
+    const { result } = renderHook(() => useShortlinkCreator('https://example.com', 'alex', 3), {
+      wrapper: ContextWrapper
+    })
+    await act(async () => { await result.current.snooze('today_18') })
+    expect(mocks.deleteTimer).toHaveBeenCalledWith(['one'])
+    expect(result.current.state.location).toBe('https://example.com')
+    expect(testContext.reportError).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'SNOOZE_SCHEDULE_ERROR'
+    }))
   })
 })

@@ -162,6 +162,8 @@ TLS reverse-proxy hop.
 | `VITE_PUBLIC_SERVICE_URL` | Base used when the frontend constructs short URLs. |
 | `VITE_DISPLAY_SERVICE_URL` | Human-readable short-link host shown in the frontend. |
 | `VITE_EXTENSION_STORE_URL` | Chrome Web Store link shown on the website. |
+| `WEB_APP_URL` | Also embedded as the sole website allowed to message the extension. |
+| `EXTENSION_ORIGIN` | Also supplies the stable extension ID used by the website handshake. |
 
 All `VITE_*` values are public and embedded in built JavaScript. Never place
 credentials in them. Changes require rebuilding the website and extension.
@@ -294,6 +296,8 @@ docker build \
   --build-arg VITE_PUBLIC_SERVICE_URL=https://shlk.example \
   --build-arg VITE_DISPLAY_SERVICE_URL=shlk.example \
   --build-arg VITE_EXTENSION_STORE_URL=https://chrome.google.com/webstore/detail/shlkcc-url-shortener/bjkhbppdemdfngnceocjmeapcfckfkok \
+  --build-arg WEB_APP_URL=https://shlk.example \
+  --build-arg EXTENSION_ORIGIN=chrome-extension://bjkhbppdemdfngnceocjmeapcfckfkok \
   .
 unzip -t release/shlk-extension.zip
 ```

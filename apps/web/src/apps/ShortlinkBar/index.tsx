@@ -18,8 +18,12 @@ import constants from '../../js/constants'
 import { useMediaQuery } from '../../js/react-hooks'
 import { useLocation } from 'react-router'
 import { useShortlinkCreator } from './use-shortlink-creator'
+import browserApi from '../../js/browser.api'
+import AppError from '../../js/app-error'
+import Button, { ButtonLink, ButtonSize, ButtonType } from '../../components/button'
 
 type Props = { onMobileInputModeChange?: (active: boolean) => void }
+type SnoozeAvailability = 'idle' | 'checking' | 'available' | 'unavailable'
 
 export default function ShortlinkBar({ onMobileInputModeChange }: Props) {
   const location = useLocation()
@@ -33,6 +37,10 @@ export default function ShortlinkBar({ onMobileInputModeChange }: Props) {
   const userTag = context.user?.userTag || getCookie('userTag') || 'someone'
   const creator = useShortlinkCreator(initialLocation, userTag, historyLimit)
   const { state, dispatch } = creator
+  const [snoozeAvailability, setSnoozeAvailability] = React.useState<SnoozeAvailability>(
+    config.target === 'extension' ? 'available' : 'idle'
+  )
+  const snoozeCheckSequence = React.useRef(0)
   const heroInputRef = React.useRef<HTMLInputElement>(null)
   const [mobileInputActive, setMobileInputActive] = React.useState(
     isMobile && config.target === 'extension' && Boolean(initialLocation)
@@ -50,6 +58,27 @@ export default function ShortlinkBar({ onMobileInputModeChange }: Props) {
     void creator.submitLocation(queryLocation ?? undefined)
   }, [activeTabUrl, creator.submitLocation, queryLocation])
 
+  const openSnooze = React.useCallback(async () => {
+    if (!context.user || !validateURL(state.location)) {
+      context.reportError(new AppError('Enter a valid link before snoozing it.', { code: 'INVALID_SNOOZE_URL' }))
+      return
+    }
+    dispatch({ type: 'snooze-options', value: true })
+    if (config.target === 'extension') { setSnoozeAvailability('available'); return }
+    const sequence = ++snoozeCheckSequence.current
+    setSnoozeAvailability('checking')
+    const available = await browserApi.probeSnoozeExtension()
+    if (sequence === snoozeCheckSequence.current) {
+      setSnoozeAvailability(available ? 'available' : 'unavailable')
+    }
+  }, [context, dispatch, state.location])
+
+  React.useEffect(() => {
+    if (!state.showSnoozeOptions) {
+      setSnoozeAvailability(config.target === 'extension' ? 'available' : 'idle')
+    }
+  }, [state.showSnoozeOptions])
+
   const handleGlobalKeyDown = React.useEffectEvent((event: KeyboardEvent) => {
     if (!(event.ctrlKey || event.metaKey)) return
     if (event.code === 'KeyD') {
@@ -61,7 +90,7 @@ export default function ShortlinkBar({ onMobileInputModeChange }: Props) {
       })
     } else if (event.code === 'KeyS') {
       event.preventDefault(); event.stopPropagation()
-      dispatch({ type: 'snooze-options', value: true })
+      void openSnooze()
     }
   })
 
@@ -88,6 +117,7 @@ export default function ShortlinkBar({ onMobileInputModeChange }: Props) {
     if (isClear) setMobileMode(false)
   }
 
+  const snoozeLocationValid = Boolean(context.user && validateURL(state.location))
   const generatedShortlink = state.result ? linkTools.generateShortlinkFromHash(state.result.hash) : undefined
   const generatedDescriptiveShortlink = state.result?.descriptor?.descriptionTag === state.descriptionTag && state.result.descriptor
     ? linkTools.generateDescriptiveShortlink(state.result.descriptor) : undefined
@@ -102,7 +132,7 @@ export default function ShortlinkBar({ onMobileInputModeChange }: Props) {
             src={[{ link: '/assets/shlk_logo.mp4', type: 'video/mp4' }]} aspectRatio={1200 / 360} timeout={1000} />}
           <HeroInput inputRef={heroInputRef} onChange={updateLocation}
             onSubmit={(value) => void creator.submitLocation(value)}
-            onSnooze={() => dispatch({ type: 'snooze-options', value: true })}
+            onSnooze={() => void openSnooze()}
             name="URL" placeholder="Type or paste a link" value={state.location}
             onFocus={() => setMobileMode(true)} hasCta={!generatedShortlink} />
         </div>
@@ -119,7 +149,23 @@ export default function ShortlinkBar({ onMobileInputModeChange }: Props) {
               ? <div className={`${globalClass}__logged-content`}>Choose a different name in <Link inline to="/app/profile">Profile</Link></div>
               : <div className={`${globalClass}__anonymous-content`}>Make it unique by <Link inline to="/login">creating an account</Link></div>} />}
         </>}
-        {state.showSnoozeOptions && <SnoozeList onSnooze={(value) => void creator.snooze(value)} />}
+        {state.showSnoozeOptions && snoozeAvailability === 'available' && snoozeLocationValid &&
+          <SnoozeList onSnooze={(value) => void creator.snooze(value)} />}
+        {state.showSnoozeOptions && snoozeAvailability === 'available' && !snoozeLocationValid &&
+          <div className={`${globalClass}__snooze-status`} role="status">Enter a valid link before snoozing it.</div>}
+        {state.showSnoozeOptions && snoozeAvailability === 'checking' &&
+          <div className={`${globalClass}__snooze-status`} role="status">Checking for the Chrome extension…</div>}
+        {state.showSnoozeOptions && snoozeAvailability === 'unavailable' &&
+          <div className={`${globalClass}__snooze-status`} role="status">
+            <div>Install or update the shlk.cc Chrome extension to reopen snoozed links.</div>
+            <div className={`${globalClass}__snooze-status__actions`}>
+              {config.extensionLink && <ButtonLink href={config.extensionLink} newTab label="Install extension"
+                size={ButtonSize.LARGE} type={ButtonType.PRIMARY} />}
+              <Button label="Retry" size={ButtonSize.LARGE} type={ButtonType.SECONDARY}
+                onClick={() => void openSnooze()} />
+            </div>
+          </div>}
+
         <div className={`${globalClass}__snackbar-container`}>
           {state.notice && <Snackbar type={SnackbarType.MESSAGE} message={state.notice.message} canDismiss timer={2000}
             onDismiss={() => dispatch({ type: 'notice', notice: null })} />}

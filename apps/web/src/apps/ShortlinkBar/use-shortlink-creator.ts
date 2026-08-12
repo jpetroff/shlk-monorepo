@@ -83,7 +83,8 @@ export function useRecentShortlinks(limit: number) {
 }
 
 export function useShortlinkCreator(initialLocation: string, defaultUserTag: string, historyLimit: number) {
-  const { reportError } = useAppContext()
+  const context = useAppContext()
+  const { reportError } = context
   const [state, dispatch] = React.useReducer(creatorReducer, {
     location: initialLocation, result: null, userTag: defaultUserTag, descriptionTag: '',
     descriptorDirty: false, createPhase: 'idle', descriptorPhase: 'idle',
@@ -96,6 +97,7 @@ export function useShortlinkCreator(initialLocation: string, defaultUserTag: str
   const createSequence = React.useRef(0)
   const descriptorSequence = React.useRef(0)
   const debouncedDescription = useDebouncedValue(state.descriptionTag, 500)
+  const snoozeInFlight = React.useRef(false)
 
   const applyResult = React.useCallback(async (result: CreatorResult, persist: boolean) => {
     dispatch({ type: 'result', result })
@@ -166,26 +168,63 @@ export function useShortlinkCreator(initialLocation: string, defaultUserTag: str
   }, [applyResult, debouncedDescription, nextController, reportError])
 
   const snooze = React.useCallback(async (standardTimer: string) => {
+    if (snoozeInFlight.current) return
+    snoozeInFlight.current = true
     const snapshot = stateRef.current
     const controller = nextController('snooze')
+    let created: ShortlinkDocument | null = null
     try {
-      const result = await Query.createOrUpdateShortlinkTimer({
+      created = await Query.createOrUpdateShortlinkTimer({
         baseDateISOString: new Date().toISOString(), location: linkTools.fixUrl(snapshot.location),
         hash: snapshot.result?.hash, standardTimer
       }, controller.signal)
-      if (!result) return
+      if (!created?._id || !created.snooze?.awake) {
+        throw new AppError('The snooze timer could not be created. Please try again.', {
+          code: 'EMPTY_SNOOZE_RESULT', source: created
+        })
+      }
+      await browserApi.scheduleSnooze({
+        id: created._id,
+        location: created.location,
+        awake: created.snooze.awake,
+        ...(created.siteTitle ? { siteTitle: created.siteTitle } : {})
+      })
       dispatch({ type: 'location', value: '' })
-      const trimmed = result.location.length > 30 ? `${result.location.slice(0, 29)}…` : result.location
+      const trimmed = created.location.length > 30 ? `${created.location.slice(0, 29)}…` : created.location
       dispatch({ type: 'notice', notice: { type: 'success',
-        message: `Snoozed until ${(result.snooze?.description ?? '').toLowerCase()}: ${trimmed}` } })
-      if (browserApi.isInit) { await browserApi.closeActiveTab(); await browserApi.sendMessage({ command: 'sync' }) }
+        message: `Snoozed until ${(created.snooze.description ?? '').toLowerCase()}: ${trimmed}` } })
+      if (context.extension?.activeTabId != null) {
+        try {
+          await browserApi.closeTab(context.extension.activeTabId)
+        } catch (error) {
+          console.error('The snooze was scheduled, but the original tab could not be closed', error)
+        }
+      }
     } catch (error) {
       if (!isAbortError(error)) {
-        reportError(error)
+        let rollbackError: unknown
+        if (created?._id) {
+          try {
+            await Query.deleteShortlinkSnoozeTimer([created._id])
+          } catch (rollbackFailure) {
+            rollbackError = rollbackFailure
+          }
+        }
+        reportError(!created
+          ? error
+          : rollbackError
+            ? new AppError('The extension could not confirm this snooze, and its timer could not be rolled back. Remove it from Snoozed before retrying.', {
+              code: 'SNOOZE_ROLLBACK_ERROR', source: { scheduleError: error, rollbackError }
+            })
+            : new AppError('The extension could not confirm this snooze. Please check that it is installed and try again.', {
+              code: 'SNOOZE_SCHEDULE_ERROR', source: error
+            }))
         dispatch({ type: 'create-error' })
       }
+    } finally {
+      snoozeInFlight.current = false
     }
-  }, [nextController, reportError])
+  }, [context.extension?.activeTabId, nextController, reportError])
 
   return { state, dispatch, submitLocation, snooze, recentItems, recentLoading }
 }

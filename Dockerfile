@@ -17,12 +17,16 @@ ARG VITE_BACKEND_URL
 ARG VITE_PUBLIC_SERVICE_URL
 ARG VITE_DISPLAY_SERVICE_URL
 ARG VITE_EXTENSION_STORE_URL
+ARG WEB_APP_URL
+ARG EXTENSION_ORIGIN
 ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
 ENV VITE_PUBLIC_SERVICE_URL=${VITE_PUBLIC_SERVICE_URL}
 ENV VITE_DISPLAY_SERVICE_URL=${VITE_DISPLAY_SERVICE_URL}
 ENV VITE_EXTENSION_STORE_URL=${VITE_EXTENSION_STORE_URL}
+ENV WEB_APP_URL=${WEB_APP_URL}
+ENV EXTENSION_ORIGIN=${EXTENSION_ORIGIN}
 COPY . .
-RUN bun -e 'for (const name of ["VITE_BACKEND_URL", "VITE_PUBLIC_SERVICE_URL", "VITE_DISPLAY_SERVICE_URL", "VITE_EXTENSION_STORE_URL"]) { if (!process.env[name]) throw new Error(`${name} is required`) }; for (const name of ["VITE_BACKEND_URL", "VITE_PUBLIC_SERVICE_URL", "VITE_EXTENSION_STORE_URL"]) { if (new URL(process.env[name]).protocol !== "https:") throw new Error(`${name} must use https`) }'
+RUN bun -e 'for (const name of ["VITE_BACKEND_URL", "VITE_PUBLIC_SERVICE_URL", "VITE_DISPLAY_SERVICE_URL", "VITE_EXTENSION_STORE_URL", "WEB_APP_URL", "EXTENSION_ORIGIN"]) { if (!process.env[name]) throw new Error(`${name} is required`) }; for (const name of ["VITE_BACKEND_URL", "VITE_PUBLIC_SERVICE_URL", "VITE_EXTENSION_STORE_URL", "WEB_APP_URL"]) { if (new URL(process.env[name]).protocol !== "https:") throw new Error(`${name} must use https`) }'
 RUN bun run build
 
 FROM base AS production-dependencies
