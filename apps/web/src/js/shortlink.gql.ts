@@ -1,4 +1,3 @@
-import _ from 'underscore'
 import { validateURL } from './utils'
 import config from './config'
 

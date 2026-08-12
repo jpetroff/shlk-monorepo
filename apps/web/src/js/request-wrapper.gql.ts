@@ -1,47 +1,75 @@
-import axios, { AxiosRequestConfig, AxiosResponse, AxiosInstance } from 'axios'
 import GracefulError from './extended-error'
 import AppError, { toAppError } from './app-error'
 
+export type GQLRequestConfig = {
+  baseURL: string
+  method?: string
+  headers?: Record<string, string>
+}
+
+export type GQLRequestOptions = {
+  signal?: AbortSignal
+}
+
+function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'name' in error &&
+    error.name === 'AbortError'
+  )
+}
 
 class GQLRequest {
-  private axiosInstance : AxiosInstance
+  private readonly baseURL: string
+  private readonly method: string
+  private readonly headers: Record<string, string>
 
-  constructor(config: AxiosRequestConfig) {
-    this.axiosInstance = axios.create({ ...config, withCredentials: true })
-
-    this.axiosInstance.interceptors.response.use(
-      this.successInterceptor,
-      this.failInterceptor
-    )
+  constructor({ baseURL, method = 'POST', headers = {} }: GQLRequestConfig) {
+    this.baseURL = baseURL
+    this.method = method
+    this.headers = headers
   }
 
-  successInterceptor(response: AxiosResponse) : Promise<AxiosResponse> {
-    if(response?.data?.errors) {
-      const errors = GracefulError.processGQLResponse(response.data)
-      throw errors[0] ?? new AppError('The request could not be completed.', { source: response.data })
+  async request(query: string, variables?: AnyObject, options: GQLRequestOptions = {}): Promise<any> {
+    let response: Response
+    try {
+      response = await fetch(this.baseURL, {
+        method: this.method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...this.headers
+        },
+        credentials: 'include',
+        body: JSON.stringify({ query, variables }),
+        signal: options.signal
+      })
+    } catch (error) {
+      if (isAbortError(error)) throw error
+      throw toAppError(error, 'The request could not be completed. Please try again.')
     }
-    return Promise.resolve(response.data.data)
-  }
 
-  failInterceptor(error: unknown) : never {
-    if (axios.isAxiosError(error)) {
-      const responseData = error.response?.data as GraphQLResponse | undefined
-      const errors = GracefulError.processGQLResponse(responseData)
-      if (errors.length > 0) throw errors[0]
+    let payload: GraphQLResponse
+    try {
+      payload = await response.json() as GraphQLResponse
+    } catch (error) {
+      throw new AppError('The request returned an invalid response. Please try again.', {
+        code: response.ok ? 'INVALID_RESPONSE' : `HTTP_${response.status}`,
+        source: error
+      })
     }
-    throw toAppError(error, 'The request could not be completed. Please try again.')
-  }
 
-  async request(query: string, variables?: AnyObject, requestConfig?: AxiosRequestConfig) : Promise<any> {
-    const config: AxiosRequestConfig = {
-      ...requestConfig,
-      data: {
-        query,
-        variables
-      }
+    const errors = GracefulError.processGQLResponse(payload)
+    if (errors.length > 0) throw errors[0]
+
+    if (!response.ok) {
+      throw new AppError(`The request failed with status ${response.status}. Please try again.`, {
+        code: `HTTP_${response.status}`,
+        source: payload
+      })
     }
-    const result = await this.axiosInstance.request(config)
-    return result
+
+    return payload.data
   }
 }
 

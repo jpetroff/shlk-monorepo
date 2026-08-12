@@ -1,4 +1,3 @@
-import * as _ from 'underscore'
 
 export const StorageType = { local: 'local', sync: 'sync', session: 'session' } as const
 export type StorageType = typeof StorageType[keyof typeof StorageType]

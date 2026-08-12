@@ -1,4 +1,3 @@
-import * as _ from 'underscore'
 import proxyStorage from './proxy-storage.webapp'
 import linkTools from './link.tools'
 import GQLShortlinkQuery from './shortlink.gql'
@@ -28,7 +27,7 @@ export enum CacheMode {
   remote = 'remote'
 }
 
-class ShortlinkCache {
+export class ShortlinkCache {
   private dateThreshold : Date
 
   private storage : Array<TCachedLink>
@@ -70,7 +69,8 @@ class ShortlinkCache {
   }
 
   public checkShortlink( args: ShortlinkLocal ) : ShortlinkLocal | null {
-    const result = _.findWhere(this.storage, args)
+    const result = this.storage.find((item) =>
+      Object.entries(args).every(([key, value]) => item[key as keyof TCachedLink] === value))
     return result || null
   }
 
@@ -84,30 +84,31 @@ class ShortlinkCache {
 
   private checkLocalStorageObject(object: any) {
     return (
-      _.isObject(object) && 
-      !_.isEmpty(object) && 
-      _.keys(object).includes('location')
+      typeof object === 'object' &&
+      object !== null &&
+      Object.keys(object).length > 0 &&
+      Object.hasOwn(object, 'location')
     )
   }
 
   private async purgeOutdatedShortlinks() {
-    let items = await proxyStorage.getAllItems(null)
-    if(!items) return
+    const storageItems = await proxyStorage.getAllItems(null) as AnyObject | null
+    if(!storageItems) return
+    let items: Array<TCachedLink & { key: string }> = Object.entries(storageItems)
+      .map(([key, item]) => ({ ...(item as TCachedLink), key }))
 
     const forcePurge = linkTools.queryUrlSearchParams(['purge'], window.location.search)
     if(forcePurge[0] == 'true') { deleteURLQueryParam('purge') }
 
-    items = _.filter(items, (item) => {
+    items = items.filter((item) => {
       return this.checkLocalStorageObject(item)
     })
 
-    items = _.sortBy(items, (item) => {
-      return Date.now() - (new Date(item.createdAt)).valueOf()
-    })
+    items.sort((a, b) => new Date(b.createdAt).valueOf() - new Date(a.createdAt).valueOf())
 
-    const trailingItems = _.last(items, items.length - 30)
+    const trailingItems = items.slice(30)
 
-    _.each(trailingItems, (item) => {
+    trailingItems.forEach((item) => {
       proxyStorage.removeItem(item.key)
     })
   }
@@ -140,9 +141,9 @@ class ShortlinkCache {
     const storageContent = await proxyStorage.getAllItems(null)
     let result : TCachedLink[] = []
 
-    if(_.isEmpty(storageContent)) return result
+    if(!storageContent || Object.keys(storageContent).length === 0) return result
     
-    _.each(storageContent, (item) => {
+    Object.values(storageContent).forEach((item) => {
       if(
         this.checkLocalStorageObject(item)
       ) {
@@ -150,11 +151,9 @@ class ShortlinkCache {
       }
     })
 
-    result = _.sortBy(result, (item) => {
-      return Date.now() - (new Date(item.createdAt)).valueOf()
-    })
+    result.sort((a, b) => new Date(b.createdAt).valueOf() - new Date(a.createdAt).valueOf())
 
-    if(limit) return _.first(result, limit)
+    if(limit) return result.slice(0, limit)
     return result
   }
 

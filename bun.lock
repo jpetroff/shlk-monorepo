@@ -35,7 +35,6 @@
     "apps/web": {
       "name": "@shlk/web",
       "dependencies": {
-        "axios": "1.18.1",
         "classnames": "2.5.1",
         "dayjs": "1.11.21",
         "graphiql": "5.2.4",
@@ -44,7 +43,6 @@
         "react-dom": "19.2.8",
         "react-router": "8.3.0",
         "react-transition-group": "4.4.5",
-        "underscore": "1.13.8",
       },
       "devDependencies": {
         "@testing-library/jest-dom": "^7.0.0",
@@ -53,7 +51,6 @@
         "@types/react": "19.2.17",
         "@types/react-dom": "19.2.3",
         "@types/react-transition-group": "4.4.12",
-        "@types/underscore": "1.13.0",
         "@vitejs/plugin-react": "6.0.4",
         "chrome-types": "0.1.436",
         "jsdom": "^30.0.1",

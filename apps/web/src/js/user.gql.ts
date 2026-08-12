@@ -1,4 +1,3 @@
-import _ from 'underscore'
 import GQLRequest from './request-wrapper.gql'
 import { validateURL } from './utils'
 import config from './config'

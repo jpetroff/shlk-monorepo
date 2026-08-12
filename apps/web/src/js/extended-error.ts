@@ -1,4 +1,3 @@
-import * as _ from 'underscore'
 import AppError from './app-error'
 
 export type GracefulErrorType = AppError
@@ -13,7 +12,7 @@ class GracefulError {
     const errorsResponseArray = response?.errors
     const result : GracefulErrorType[] = []
     if(errorsResponseArray && errorsResponseArray.length > 0) {
-      _.each(errorsResponseArray, (item, index) => {
+      errorsResponseArray.forEach((item) => {
         result.push(new AppError(item.message, {
           code: item.extensions?.code ? String(item.extensions.code) : undefined,
           source: item || undefined

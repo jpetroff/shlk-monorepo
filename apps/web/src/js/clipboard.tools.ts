@@ -1,4 +1,3 @@
-import _ from 'underscore'
 import constants from './constants'
 import config from './config'
 
@@ -7,8 +6,8 @@ class ClipboardTools {
 
   constructor() {
     this.enabled = (
-      _.isFunction(navigator.clipboard.writeText) &&
-      _.isFunction(navigator.clipboard.readText)
+      typeof navigator.clipboard?.writeText === 'function' &&
+      typeof navigator.clipboard?.readText === 'function'
     )
   }
 

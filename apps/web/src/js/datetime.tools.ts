@@ -1,4 +1,3 @@
-import * as _ from 'underscore'
 import { valueByPath } from './utils'
 import dayjs from 'dayjs'
 
@@ -21,7 +20,7 @@ export default {
   groupDatedItems<T>(items: T[], timestampKey: string[], baseDate: Date = new Date()) : DateGrouped<T>[] {
     const result : DateGrouped<T>[] = []
 
-    _.each(items, (item) => {
+    items.forEach((item) => {
       const value = valueByPath(item as AnyObject, timestampKey) as Maybe<string | number>
       if(value === undefined || value === null || value === '') return
       try {

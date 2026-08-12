@@ -1,4 +1,3 @@
-import * as _ from 'underscore'
 import constants from './constants'
 import config from './config'
 import AppError from './app-error'
@@ -56,17 +55,10 @@ class LinkTools {
     Returns corresponding query values or null [ 'value1', null, ...  ]
    */
   queryUrlSearchParams(queryParam: string[], searchParamsString?: string) : Array<string | null> {
-    if(!searchParamsString) return Array.from({length: _.size(queryParam)}, () => null)
+    if(!searchParamsString) return Array.from({length: queryParam.length}, () => null)
 
     const searchParams = new URLSearchParams(searchParamsString)
-    const result : Array<string | null> = []
-    _.forEach(queryParam, (param) => {
-      result.push(searchParams.get(param))
-    })
-    _.map(result, (item) => {
-      if(item != null) return decodeURIComponent(item)
-    })
-    return result 
+    return queryParam.map((param) => searchParams.get(param))
   }
 
   makeDisplayUrl(rawUrl: string): string {
@@ -78,7 +70,7 @@ class LinkTools {
   makeDisplayShortlink(hash: string): string;
   makeDisplayShortlink( {userTag, descriptionTag} : {userTag?: string, descriptionTag: string} ): string;
   makeDisplayShortlink( prop: string | {userTag?: string, descriptionTag: string} ):string {
-    if(_.isObject(prop)) {
+    if(typeof prop === 'object' && prop !== null) {
       const userTagPart = prop.userTag ? prop.userTag : ''
       const descriptionTagPart = '@' + prop.descriptionTag
       return `${this.displayServiceUrl}/${userTagPart}${descriptionTagPart}`
