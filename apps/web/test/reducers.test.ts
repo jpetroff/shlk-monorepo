@@ -47,6 +47,21 @@ describe('creatorReducer', () => {
     expect(next.notice).toBeNull()
     expect(previous.result).not.toBeNull()
   })
+
+  it('applies an authenticated default tag without overwriting edited or completed work', () => {
+    const authenticated = creatorReducer(creatorState, { type: 'default-user-tag', value: 'signed-in' })
+    expect(authenticated.userTag).toBe('signed-in')
+    expect(authenticated.location).toBe(creatorState.location)
+
+    const edited = { ...creatorState, descriptorDirty: true, descriptionTag: 'draft' }
+    expect(creatorReducer(edited, { type: 'default-user-tag', value: 'signed-in' })).toBe(edited)
+
+    const completed = {
+      ...creatorState,
+      result: { location: creatorState.location, hash: 'hash' }
+    }
+    expect(creatorReducer(completed, { type: 'default-user-tag', value: 'signed-in' })).toBe(completed)
+  })
 })
 
 describe('shortlinkListReducer', () => {

@@ -8,11 +8,13 @@ import { useAppContext } from '../js/app.context'
 import ShortlinkList from '../apps/ShortlinkList'
 import { useMediaQuery } from '../js/react-hooks'
 import constants from '../js/constants'
+import LoadingSkeleton from '../components/loading-skeleton'
 
 export default function AppMain() {
   const context = useAppContext()
   const isMobile = useMediaQuery(constants.MediaQueries.mobile)
   if (!context.user?.email) return <Navigate to="/login" replace />
+  if (context.authStatus === 'checking') return <LoadingSkeleton />
   const globalClass = styles.appMainClass + '_app-main'
   return <div className={globalClass}>
     <Header backButton="/" title="My Links" position={isMobile ? HeaderPosition.fixed : undefined} />

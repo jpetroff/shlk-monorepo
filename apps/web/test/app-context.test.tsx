@@ -1,8 +1,22 @@
 import * as React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { expect, it, vi } from 'vitest'
+import { beforeEach, expect, it, vi } from 'vitest'
 import { AppContextProvider, useAppContext } from '../src/js/app.context'
+
+const mocks = vi.hoisted(() => ({
+  getLoggedInUser: vi.fn(),
+  setMode: vi.fn()
+}))
+
+vi.mock('../src/js/user.gql', () => ({
+  default: { getLoggedInUser: mocks.getLoggedInUser }
+}))
+
+vi.mock('../src/js/cache', () => ({
+  CacheMode: { local: 'local', remote: 'remote' },
+  default: { setMode: mocks.setMode }
+}))
 
 function ErrorReporter({ retry }: { retry: () => void }) {
   const context = useAppContext()

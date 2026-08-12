@@ -52,6 +52,12 @@ export default function Header({ backButton = '', title, position, hideLogo = fa
       </div>}
     </div>
     <div className={`${globalClass}__user`}>
+      {context.authStatus === 'checking' && <div
+        className={`${globalClass}__account-link ${globalClass}__account-link_loading`} aria-busy="true">
+        <div className={`${globalClass}__account-link__avatar`} aria-hidden="true" />
+        <div className={`${globalClass}__account-link__text`} aria-hidden="true">Sign in</div>
+      </div>}
+      {context.authStatus !== 'checking' && <>
       <ActionLink ref={accountTriggerRef} className={`${globalClass}__account-link`} aria-haspopup={user ? 'menu' : undefined}
         aria-expanded={user ? showDropdown : undefined} onClick={() => user ? setShowDropdown(true) : navigate('/login')}>
         {!user && <><div className={`${globalClass}__account-link__avatar`}><Icon useIcon={Avatar} size={IconSize.LARGE} /></div>
@@ -77,6 +83,7 @@ export default function Header({ backButton = '', title, position, hideLogo = fa
         <MenuItem.Separator />
         <MenuItem label="Logout" icon={Logout} onClick={logout} />
       </DropdownMenu>}
+      </>}
     </div>
   </header>
 }

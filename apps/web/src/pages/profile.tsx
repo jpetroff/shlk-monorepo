@@ -8,10 +8,12 @@ import UserSettings from '../apps/UserSettings'
 import Icon, { CaretLeft, IconSize } from '../components/icons'
 import { useAppContext } from '../js/app.context'
 import Scroller from '../components/scroller'
+import LoadingSkeleton from '../components/loading-skeleton'
 
 export default function Profile() {
   const context = useAppContext()
   if (!context.user?.email) return <Navigate to="/login" replace />
+  if (context.authStatus === 'checking') return <LoadingSkeleton />
   const globalClass = styles.profileClass + '_profile'
   return <div className={globalClass}>
     <Header backButton="/" title="My profile" position={HeaderPosition.sticky} />

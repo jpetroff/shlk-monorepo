@@ -33,7 +33,8 @@ class ShortlinkCache {
 
   private storage : Array<TCachedLink>
   private storagePromise: Promise<Array<TCachedLink>> = Promise.resolve([])
-  public mode: CacheMode = CacheMode.local
+  private storageGeneration = 0
+  private mode: CacheMode = CacheMode.local
 
   constructor() {
     const _now = new Date()
@@ -42,13 +43,22 @@ class ShortlinkCache {
     queueMicrotask(() => void this.purgeOutdatedShortlinks())
   }
 
+  public setMode(mode: CacheMode) {
+    if (this.mode === mode) return
+    this.mode = mode
+    ++this.storageGeneration
+    this.storage = []
+    this.storagePromise = Promise.resolve([])
+  }
+
   public async setStorage() {
-    if(this.mode == CacheMode.local) {
-      this.storagePromise = this.getAllFromLocalStorage()
-    } else {
-      this.storagePromise = this.getAllFromRemote()
-    }
-    this.storage = await this.storagePromise
+    const generation = ++this.storageGeneration
+    const storagePromise = this.mode == CacheMode.local
+      ? this.getAllFromLocalStorage()
+      : this.getAllFromRemote()
+    this.storagePromise = storagePromise
+    const storage = await storagePromise
+    if (generation === this.storageGeneration) this.storage = storage
   }
 
   public async awaitStorage(): Promise<Array<TCachedLink>> {

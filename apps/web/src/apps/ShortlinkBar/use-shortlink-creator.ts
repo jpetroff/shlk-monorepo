@@ -31,6 +31,7 @@ export type CreatorAction =
   | { type: 'descriptor-loading' }
   | { type: 'descriptor-error' }
   | { type: 'descriptor-clear' }
+  | { type: 'default-user-tag', value: string }
   | { type: 'snooze-options', value: boolean }
   | { type: 'notice', notice: CreatorNotice | null }
 
@@ -50,6 +51,7 @@ export function creatorReducer(state: CreatorState, action: CreatorAction): Crea
     case 'descriptor-loading': return { ...state, descriptorPhase: 'loading' }
     case 'descriptor-error': return { ...state, descriptorPhase: 'error', notice: null }
     case 'descriptor-clear': return { ...state, descriptorDirty: false, descriptorPhase: 'idle' }
+    case 'default-user-tag': return state.result || state.descriptorDirty ? state : { ...state, userTag: action.value }
     case 'snooze-options': return { ...state, showSnoozeOptions: action.value }
     case 'notice': return { ...state, notice: action.notice }
   }
@@ -57,7 +59,7 @@ export function creatorReducer(state: CreatorState, action: CreatorAction): Crea
 
 export function useRecentShortlinks(limit: number) {
   const [items, setItems] = React.useState<TCachedLink[]>([])
-  const { reportError } = useAppContext()
+  const { reportError, user } = useAppContext()
   const [loading, setLoading] = React.useState(false)
   const sequence = React.useRef(0)
   const refresh = React.useCallback(async () => {
@@ -74,7 +76,7 @@ export function useRecentShortlinks(limit: number) {
     } finally {
       if (request === sequence.current) setLoading(false)
     }
-  }, [limit, reportError])
+  }, [limit, reportError, user?.email])
   React.useEffect(() => {
     void refresh()
     return () => { ++sequence.current }
@@ -90,6 +92,9 @@ export function useShortlinkCreator(initialLocation: string, defaultUserTag: str
     descriptorDirty: false, createPhase: 'idle', descriptorPhase: 'idle',
     showSnoozeOptions: false, notice: null
   })
+  React.useEffect(() => {
+    dispatch({ type: 'default-user-tag', value: defaultUserTag })
+  }, [defaultUserTag])
   const stateRef = React.useRef(state)
   React.useEffect(() => { stateRef.current = state }, [state])
   const { items: recentItems, loading: recentLoading, refresh: refreshRecent } = useRecentShortlinks(historyLimit)

@@ -11,23 +11,26 @@ async function main() {
   document.documentElement.classList.add(config.target)
   let appContext: AppContextState = {}
   let initError: unknown
-  try {
-    appContext = await getInitAppContext()
-  } catch (error) {
-    initError = error
-  }
-  cache.mode = appContext.user ? CacheMode.remote : CacheMode.local
-  try {
-    await cache.setStorage()
-  } catch (error) {
-    initError ??= error
+  if (config.target === 'extension') {
+    try {
+      appContext = await getInitAppContext()
+    } catch (error) {
+      initError = error
+    }
+    cache.setMode(appContext.user ? CacheMode.remote : CacheMode.local)
+    try {
+      await cache.setStorage()
+    } catch (error) {
+      initError ??= error
+    }
   }
 
   const container = document.getElementById('app')
   if (!container) throw new Error('Application root element was not found')
   createRoot(container).render(
     <StrictMode>
-      <AppContextProvider initValue={appContext} initError={initError}>
+      <AppContextProvider initValue={appContext} initError={initError}
+        initializeOnMount={config.target === 'webapp'}>
         <RouterProvider router={createRouter()} />
       </AppContextProvider>
     </StrictMode>

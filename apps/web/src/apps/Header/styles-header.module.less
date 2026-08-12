@@ -56,6 +56,15 @@
     @media @mq-mobile {
       &__text {display: none;}
     }
+
+    &_loading {
+      color: transparent;
+      pointer-events: none;
+    }
+
+    &_loading &__avatar {
+      background-color: @black-90;
+    }
   }
   &__account-link &__account-link__avatar,
   &__dropdown-header__avatar {
