@@ -139,7 +139,7 @@ export class ShortlinkCache {
 
   private async getAllFromLocalStorage( limit?: number ) : Promise<Array<TCachedLink>> {
     const storageContent = await proxyStorage.getAllItems(null)
-    let result : TCachedLink[] = []
+    const result : TCachedLink[] = []
 
     if(!storageContent || Object.keys(storageContent).length === 0) return result
     

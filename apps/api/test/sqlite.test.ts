@@ -104,10 +104,10 @@ describe('SQLite repositories', () => {
       name: 'First Renamed'
     })
 
-    expect(first.userTag).toBe('first user')
+    expect(first.userTag).toBe('first-user')
     expect(second._id).not.toBe(first._id)
     expect(updated._id).toBe(first._id)
-    expect(updated.userTag).toBe('first user')
+    expect(updated.userTag).toBe('first-user')
     expect(updated.name).toBe('First Renamed')
   })
 
