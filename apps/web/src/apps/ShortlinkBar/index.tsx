@@ -21,6 +21,8 @@ import { useShortlinkCreator } from './use-shortlink-creator'
 import browserApi from '../../js/browser.api'
 import AppError from '../../js/app-error'
 import Button, { ButtonLink, ButtonSize, ButtonType } from '../../components/button'
+import logoPosterUrl from '../../assets/media/shlk_logo.webp'
+import logoVideoUrl from '../../assets/media/shlk_logo.mp4'
 
 type Props = { onMobileInputModeChange?: (active: boolean) => void }
 type SnoozeAvailability = 'idle' | 'checking' | 'available' | 'unavailable'
@@ -128,8 +130,8 @@ export default function ShortlinkBar({ onMobileInputModeChange }: Props) {
     <div className={`${globalClass}__layout`}>
       <div className={`${globalClass}__shortlink-block ${mobileClass}`}>
         <div className={`${globalClass}__offset-wrapper`}>
-          {!mobileInputActive && <Video className={`${globalClass}__video`} thumbnail="/assets/shlk_logo.jpg"
-            src={[{ link: '/assets/shlk_logo.mp4', type: 'video/mp4' }]} aspectRatio={1200 / 360} timeout={1000} />}
+          {!mobileInputActive && <Video className={`${globalClass}__video`} thumbnail={logoPosterUrl}
+            src={[{ link: logoVideoUrl, type: 'video/mp4' }]} aspectRatio={1200 / 360} timeout={1000} />}
           <HeroInput inputRef={heroInputRef} onChange={updateLocation}
             onSubmit={(value) => void creator.submitLocation(value)}
             onSnooze={() => void openSnooze()}

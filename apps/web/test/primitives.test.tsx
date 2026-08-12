@@ -12,6 +12,7 @@ import Snackbar, { SnackbarType } from '../src/components/snackbar'
 import ShortlinkListItem from '../src/components/shortlink-list-item'
 import { createTestAppContext } from './context-test-helpers'
 import HeroInput from '../src/components/hero-input'
+import Video from '../src/components/video'
 import AppContext from '../src/js/app.context'
 
 afterEach(() => vi.useRealTimers())
@@ -79,6 +80,26 @@ it('names the hero URL input without rendering an extra label', () => {
   expect(screen.getByRole('textbox', { name: 'Type or paste a link' })).toBeInTheDocument()
   expect(document.querySelector('label')).not.toBeInTheDocument()
 })
+it('defers video playback without explicitly loading the media twice', () => {
+  vi.useFakeTimers()
+  const load = vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => undefined)
+  const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
+  const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined)
+  const { container, unmount } = render(<Video
+    thumbnail="/poster.jpg"
+    src={[{ link: '/logo.mp4', type: 'video/mp4' }]}
+    timeout={100}
+  />)
+
+  expect(container.querySelector('video')).toHaveAttribute('preload', 'none')
+  expect(load).not.toHaveBeenCalled()
+  window.dispatchEvent(new Event('load'))
+  act(() => vi.advanceTimersByTime(100))
+  expect(play).toHaveBeenCalledOnce()
+  unmount()
+  expect(pause).toHaveBeenCalledOnce()
+})
+
 
 it('focuses and keyboard-navigates menu items, then handles Escape', async () => {
   const user = userEvent.setup()

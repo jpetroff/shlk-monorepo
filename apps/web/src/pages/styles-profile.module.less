@@ -1,0 +1,24 @@
+@import (reference) './_page-mixins.less';
+
+:local(.profileClass)_profile {
+  .mixin-fullscreen-page;
+  display: flex;
+  flex-direction: column;
+
+  &__layout {
+    .mixin-centered-content;
+  }
+
+  &__body {
+    .mixin-narrow-body;
+    .mixin-vertical-centered-body;
+    justify-content: center;
+    align-items: center;
+  }
+
+  &__profile-content {
+    padding: 2rem 1.25rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+}

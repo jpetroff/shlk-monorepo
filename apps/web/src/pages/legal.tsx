@@ -1,4 +1,4 @@
-import styles from './styles-page.module.less'
+import styles from './styles-legal.module.less'
 
 import * as React from 'react'
 import { useNavigate } from 'react-router'

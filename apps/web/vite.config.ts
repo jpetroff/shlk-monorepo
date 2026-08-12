@@ -86,6 +86,7 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       outDir: extension ? 'dist/extension' : 'dist/web',
+      assetsInlineLimit: 0,
       emptyOutDir: true,
       rollupOptions: {
         input: extension

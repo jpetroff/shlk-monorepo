@@ -1,0 +1,32 @@
+@import (reference) './_page-mixins.less';
+
+:local(.appMainClass)_app-main {
+  .mixin-fullscreen-page;
+  height: 100vh;
+  -webkit-overflow-scrolling: none;
+  overflow: hidden;
+
+  @media @mq-mobile {
+    box-sizing: border-box;
+  }
+
+  &__layout {
+    .mixin-centered-content;
+    box-sizing: border-box;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  &__body {
+    .mixin-narrow-body;
+    height: 100%;
+    flex-direction: column;
+    background-color: @blue-95;
+    border-radius: 4px;
+  }
+
+  &__shortlink-list {
+    display: flex;
+    flex-direction: column;
+  }
+}

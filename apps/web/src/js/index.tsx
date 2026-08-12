@@ -5,8 +5,9 @@ import config from './config'
 import { getInitAppContext, AppContextProvider, type AppContextState } from './app.context'
 import createRouter from './routes'
 import cache, { CacheMode } from './cache'
+import LoadingSkeleton from '../components/loading-skeleton'
 
-import { StrictMode } from 'react'
+import { StrictMode, Suspense } from 'react'
 async function main() {
   document.documentElement.classList.add(config.target)
   let appContext: AppContextState = {}
@@ -31,7 +32,7 @@ async function main() {
     <StrictMode>
       <AppContextProvider initValue={appContext} initError={initError}
         initializeOnMount={config.target === 'webapp'}>
-        <RouterProvider router={createRouter()} />
+        <Suspense fallback={<LoadingSkeleton />}><RouterProvider router={createRouter()} /></Suspense>
       </AppContextProvider>
     </StrictMode>
   )

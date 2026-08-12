@@ -1,4 +1,4 @@
-import styles from './styles-page.module.less'
+import styles from './styles-profile.module.less'
 import * as React from 'react'
 import { Navigate } from 'react-router'
 import Link from '../components/link'

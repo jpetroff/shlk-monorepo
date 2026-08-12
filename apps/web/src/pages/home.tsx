@@ -1,4 +1,4 @@
-import styles from './styles-page.module.less'
+import styles from './styles-home.module.less'
 import * as React from 'react'
 import Header from '../apps/Header'
 import ShortlinkBar from '../apps/ShortlinkBar'

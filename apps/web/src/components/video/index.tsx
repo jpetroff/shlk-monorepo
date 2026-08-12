@@ -15,16 +15,27 @@ export default function Video({ src, thumbnail, width, height, className, aspect
   React.useEffect(() => {
     const video = videoNode.current
     if (!video) return
-    video.load()
-    const timerId = window.setTimeout(() => { video.play().catch(() => undefined) }, timeout)
-    return () => { window.clearTimeout(timerId); video.pause() }
+    let timerId: number | undefined
+    let disposed = false
+    const schedulePlay = () => {
+      if (disposed) return
+      timerId = window.setTimeout(() => { video.play().catch(() => undefined) }, timeout)
+    }
+    if (document.readyState === 'complete') schedulePlay()
+    else window.addEventListener('load', schedulePlay, { once: true })
+    return () => {
+      disposed = true
+      window.removeEventListener('load', schedulePlay)
+      if (timerId !== undefined) window.clearTimeout(timerId)
+      video.pause()
+    }
   }, [sourceKey, timeout])
 
   if (src.length === 0) return null
   const responsiveClass = !(width && height) && aspectRatio ? `${globalClass}__video-node_responsive` : ''
   return <div className={classes}>
     <video poster={thumbnail} ref={videoNode} className={`${globalClass}__video-node ${responsiveClass}`}
-      muted={muted} controls={false} preload="metadata" playsInline height={height} width={width}
+      muted={muted} controls={false} preload="none" playsInline height={height} width={width}
       style={aspectRatio ? { aspectRatio } : undefined}>
       {src.map((source) => <source src={source.link} type={source.type} key={`${source.link}:${source.type}`} />)}
     </video>

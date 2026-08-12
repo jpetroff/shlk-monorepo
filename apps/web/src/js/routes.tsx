@@ -1,14 +1,14 @@
-import React, { lazy, Suspense } from 'react'
+import React, { lazy } from 'react'
 import { createBrowserRouter, createHashRouter } from 'react-router'
 import config from './config'
 
 /* PAGES */
 import Home from '../pages/home'
-import Login from '../pages/login'
-import AppMain from '../pages/app-main'
-import Profile from '../pages/profile'
-import Legal from '../pages/legal'
 import RouteError, { NotFound } from '../pages/route-error'
+const Login = lazy(() => import('../pages/login'))
+const AppMain = lazy(() => import('../pages/app-main'))
+const Profile = lazy(() => import('../pages/profile'))
+const Legal = lazy(() => import('../pages/legal'))
 
 export default function createRouter() {
   const createRouter = config.target == 'webapp' ? createBrowserRouter : createHashRouter
@@ -48,7 +48,7 @@ export default function createRouter() {
     const GraphiQLPage = lazy(() => import('../pages/graphiql'))
     routes.push({
       path: '/__graphiql',
-      element: <Suspense fallback={null}><GraphiQLPage /></Suspense>
+      element: <GraphiQLPage />
     })
   }
 

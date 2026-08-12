@@ -1,0 +1,26 @@
+@import (reference) './_page-mixins.less';
+
+:local(.legalClass)_legal {
+  .mixin-fullscreen-page;
+  display: flex;
+  flex-direction: column;
+
+  &__layout {
+    .mixin-centered-content;
+  }
+
+  &__body {
+    .mixin-narrow-body;
+    .mixin-vertical-centered-body;
+    justify-content: center;
+    align-items: center;
+  }
+
+  &__legal-content {
+    .t-text_16-20;
+    font-family: @font-face-system;
+    padding: 2rem 1.25rem;
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
