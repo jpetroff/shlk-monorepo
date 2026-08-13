@@ -41,3 +41,27 @@ export async function checkBanlist(value: string, type: BanType): Promise<void> 
     { code: 'BANNED' }
   )
 }
+
+export function isBanlisted(value: string, type: BanType): boolean {
+  const entries = db.select({ value: banlist.value })
+    .from(banlist)
+    .where(eq(banlist.type, type))
+    .all()
+  return matchesBanlist(value, type, entries.map((entry) => entry.value))
+}
+
+export function banLocation(location: string): void {
+  const entries = db.select({ value: banlist.value })
+    .from(banlist)
+    .where(eq(banlist.type, 'location'))
+    .all()
+  if (entries.some((entry) => entry.value === location)) return
+
+  const now = new Date().toISOString()
+  db.insert(banlist).values({
+    value: location,
+    type: 'location',
+    createdAt: now,
+    updatedAt: now
+  }).run()
+}

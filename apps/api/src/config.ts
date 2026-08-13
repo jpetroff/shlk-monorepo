@@ -30,6 +30,7 @@ export function loadConfig(env: Environment = process.env) {
     GOOGLE_CLIENT_ID: env.GOOGLE_CLIENT_ID ?? '',
     GOOGLE_CLIENT_SECRET: env.GOOGLE_CLIENT_SECRET ?? '',
     GOOGLE_REDIRECT_URI: env.GOOGLE_REDIRECT_URI ?? '',
+    WEB_RISK_API_KEY: env.WEB_RISK_API_KEY?.trim() ?? '',
     E2E_AUTH_SECRET: env.E2E_AUTH_SECRET?.trim() ?? '',
     WEB_APP_URL: env.WEB_APP_URL ?? '',
     PUBLIC_SERVICE_URL: env.PUBLIC_SERVICE_URL ?? '',

@@ -27,7 +27,7 @@ export function modifyURLSlug (str: string) : string {
  */
 export function normalizeURL( _url: string ): string {
   let url = _url.trim()
-  const protocolRegex = new RegExp('^https?://')
+  const protocolRegex = new RegExp('^https?://', 'i')
 
   if(!protocolRegex.test(url)) url = 'https://'+url
 

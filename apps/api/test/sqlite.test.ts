@@ -173,7 +173,7 @@ describe('SQLite repositories', () => {
     const updated = await updateShortlink(owner.id, {
       id: 'edited-metadata-link',
       shortlink: {
-        location: 'http://127.0.0.1:1/updated',
+        location: 'https://example.net/updated',
         urlMetadata: { title: 'User metadata' },
         siteTitle: 'User title',
         siteDescription: 'User description'
@@ -181,7 +181,7 @@ describe('SQLite repositories', () => {
     })
 
     expect(updated).toMatchObject({
-      location: 'http://127.0.0.1:1/updated',
+      location: 'https://example.net/updated',
       urlMetadata: { title: 'User metadata' },
       siteTitle: 'User title',
       siteDescription: 'User description'

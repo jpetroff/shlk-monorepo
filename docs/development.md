@@ -143,6 +143,7 @@ and never commit the secret or Playwright storage state.
 | `GOOGLE_CLIENT_ID` | Yes | Google OAuth web-client ID. |
 | `GOOGLE_CLIENT_SECRET` | Yes | Google OAuth web-client secret. |
 | `GOOGLE_REDIRECT_URI` | Yes | OAuth callback; production requires HTTPS. |
+| `WEB_RISK_API_KEY` | No | Enables asynchronous Google Web Risk checks for short-link destinations. |
 | `E2E_AUTH_SECRET` | No | Enables the test-only `/api/__e2e/login` route outside production. |
 | `WEB_APP_URL` | Yes | Website origin used for CORS and OAuth/logout redirects; production requires HTTPS. |
 | `PUBLIC_SERVICE_URL` | Yes | Absolute base used when the API creates short URLs; production requires HTTPS. |

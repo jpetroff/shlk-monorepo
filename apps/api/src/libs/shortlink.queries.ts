@@ -5,7 +5,7 @@ import { toShortlink } from '../db/adapters'
 import { shortlinks, users } from '../db/schema'
 import generateHash from './hash.lib'
 import fetchMetadata from './url-parser.lib'
-import { ExtError, modifyURLSlug, normalizeURL, sameOrNoOwnerID } from './utils'
+import { ExtError, modifyURLSlug, sameOrNoOwnerID } from './utils'
 import SnoozeTools, {
   StandardTimers,
   SnoozeDay,
@@ -13,6 +13,8 @@ import SnoozeTools, {
   StandardTimerGroups
 } from '../libs/snooze.tools'
 import { checkBanlist } from './ban.queries'
+import { scheduleThreatCheck } from './threat-check.service'
+import { normalizeAllowedDestination } from './url-policy'
 
 export const ShortlinkPublicFields: (keyof ShortlinkDocument)[] = [
   'hash',
@@ -104,7 +106,7 @@ async function createOrGetShortlink(
   userId?: Maybe<string>,
   requestedHash?: Maybe<string>
 ): Promise<ShortlinkDocument> {
-  const location = normalizeURL(rawLocation)
+  const location = normalizeAllowedDestination(rawLocation)
   await checkBanlist(location, 'location')
 
   const user = findUser(userId)
@@ -115,7 +117,11 @@ async function createOrGetShortlink(
       eq(shortlinks.ownerId, ownerId),
       eq(shortlinks.location, location)
     )).limit(1).get()
-    if (existingForUser) return toShortlink(existingForUser)
+    if (existingForUser) {
+      const result = toShortlink(existingForUser)
+      scheduleThreatCheck(result.location)
+      return result
+    }
   }
 
   const initialHash = requestedHash || generateHash()
@@ -129,7 +135,9 @@ async function createOrGetShortlink(
     existingHash.location === location &&
     sameOrNoOwnerID(existingHash.ownerId, ownerId)
   ) {
-    return toShortlink(existingHash)
+    const result = toShortlink(existingHash)
+    scheduleThreatCheck(result.location)
+    return result
   }
 
   for (let attempt = 0; attempt < 10; attempt += 1) {
@@ -145,6 +153,7 @@ async function createOrGetShortlink(
       }).returning().get()
       const result = toShortlink(row)
       scheduleMetadataUpdate(result)
+      scheduleThreatCheck(result.location)
       return result
     } catch (error) {
       if (!isHashConstraint(error)) throw error
@@ -170,7 +179,7 @@ export async function createShortlinkDescriptor(
     userId?: string
   }
 ): Promise<ShortlinkDocument | null> {
-  const location = normalizeURL(args.location)
+  const location = normalizeAllowedDestination(args.location)
   const descriptionTag = modifyURLSlug(args.descriptionTag)
 
   await checkBanlist(location, 'location')
@@ -269,7 +278,7 @@ export async function updateShortlink(
 
   let location = current.location
   if (requested.location) {
-    location = normalizeURL(requested.location)
+    location = normalizeAllowedDestination(requested.location)
     await checkBanlist(location, 'location')
     updates.location = location
   }
@@ -281,7 +290,10 @@ export async function updateShortlink(
   }
   if ('tags' in requested) updates.tags = requested.tags ?? null
 
-  if (requested.location) {
+  const needsMetadata = !('urlMetadata' in requested) ||
+    !('siteTitle' in requested) ||
+    !('siteDescription' in requested)
+  if (requested.location && needsMetadata) {
     const [urlMetadata, siteTitle, siteDescription] = await fetchMetadata(location)
     if (!('urlMetadata' in requested)) updates.urlMetadata = urlMetadata
     if (!('siteTitle' in requested)) updates.siteTitle = siteTitle
@@ -305,7 +317,11 @@ export async function updateShortlink(
       ))
       .returning()
       .get()
-    return row ? toShortlink(row) : null
+    if (!row) return null
+
+    const result = toShortlink(row)
+    if (requested.location) scheduleThreatCheck(result.location)
+    return result
   } catch (error) {
     if (isDescriptorConstraint(error)) {
       throw new ExtError(

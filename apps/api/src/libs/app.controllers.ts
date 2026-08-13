@@ -1,49 +1,63 @@
 import { getShortlink } from './shortlink.queries'
 import _ from 'underscore'
 import express from 'express'
+import { isBanlisted } from './ban.queries'
+import { scheduleThreatCheck } from './threat-check.service'
 
-function sendDescriptiveRedirect (res: express.Response, result: ShortlinkDocument) {
+const SHORTLINK_HEADERS = {
+  'Cache-Control': 'no-store',
+  'X-Robots-Tag': 'noindex',
+  'Referrer-Policy': 'no-referrer'
+} as const
+
+function sendRedirect(res: express.Response, result: ShortlinkDocument): void {
   const location = _.unescape(result.location)
-  res.redirect(302, location)
-  res.end()
+  res.status(301).set({
+    ...SHORTLINK_HEADERS,
+    Location: location
+  }).end()
 }
 
-function sendRedirect (res: express.Response, result: ShortlinkDocument) {
-  const location = _.unescape(result.location)
-  res.redirect(302, location)
-  res.end()
+function sendNotFound(res: express.Response): void {
+  res.status(404).set(SHORTLINK_HEADERS).type('text/plain').send('Shortlink not found')
 }
 
-function sendErrorResponse (res: express.Response, error: Error) {
-  res.status(400).send(error.message)
+function sendBlocked(res: express.Response): void {
+  res.status(410).set(SHORTLINK_HEADERS).type('text/plain').send('Shortlink unavailable')
 }
 
-export function appRedirect (req: express.Request, res: express.Response) {
+export async function appRedirect(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): Promise<void> {
   const redirectUrl = String(req.params.redirectUrl)
-  const isDecriptiveUrl = /.*?@.*?/.test(redirectUrl)
+  const isDescriptiveUrl = redirectUrl.includes('@')
 
-  if(isDecriptiveUrl) {
-    const [ userTag , descriptionTag ] = redirectUrl.split('@')
-    getShortlink({
-      userTag,
-      descriptionTag
-    }).then( (result) => {
-      if(!result) throw new Error(`Shortlink '/${redirectUrl}' not found`)
-      return sendDescriptiveRedirect(res, result)
-    }).catch( (err) => {
-      return sendErrorResponse(res, err)
-    }) 
+  try {
+    let result: ShortlinkDocument | null
+    if (isDescriptiveUrl) {
+      const [userTag, descriptionTag] = redirectUrl.split('@')
+      result = await getShortlink({ userTag, descriptionTag })
+    } else {
+      result = await getShortlink({ hash: redirectUrl })
+    }
 
-  } else {
-    const hash = redirectUrl
-    getShortlink({
-      hash
-    }).then( (result) => {
-      if(!result) throw new Error(`Shortlink '/${redirectUrl}' not found`)
-      return sendRedirect(res, result)
-    }).catch( (err) => {
-      return sendErrorResponse(res, err)
-    })
+    if (!result) {
+      sendNotFound(res)
+      return
+    }
 
+    const location = _.unescape(result.location)
+    if (isBanlisted(location, 'location')) {
+      console.warn('Blocked shortlink redirect', { shortlink: redirectUrl })
+      sendBlocked(res)
+      return
+    }
+
+    scheduleThreatCheck(location)
+    sendRedirect(res, result)
+  } catch (error) {
+    next(error)
   }
 }
