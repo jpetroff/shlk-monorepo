@@ -2,4 +2,10 @@
 
 :local(.homeClass)_home {
   .mixin-fullscreen-page;
+
+  @media @mq-mobile {
+    &_mobile-input-active &__header {
+      visibility: hidden;
+    }
+  }
 }

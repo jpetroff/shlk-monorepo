@@ -65,16 +65,27 @@
     }
     .__mobile-convenience-state &__offset-wrapper {
       padding: 0;
+      position: sticky;
+      top: 0;
+      z-index: @z-static-top + 3;
+      background-color: @black-100;
     }
   }
 
   @media @mq-mobile {
     .__mobile-convenience-state&__shortlink-block {
-      position: absolute;
+      position: fixed;
       z-index: @z-static-top + 2;
       top: 0;
       left: 0;
       right: 0;
+      max-height: var(--mobile-viewport-height, 100vh);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      transform: translate3d(0, var(--mobile-viewport-offset-top, 0px), 0);
+      flex-grow: 0;
+      justify-content: flex-start;
       background-color: @black-100;
       box-shadow: @shadow-light-20, @thin-shadow-stroke;
       border-radius: 0px 0px 0.5rem 0.5rem;
@@ -87,6 +98,9 @@
   @media @mq-mobile {
     &__video {
       width: 260px;
+    }
+    .__mobile-convenience-state &__video {
+      display: none;
     }
   }
 

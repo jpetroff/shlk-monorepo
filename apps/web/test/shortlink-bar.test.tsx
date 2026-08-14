@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router'
 import AppContext, { type AppContextT } from '../src/js/app.context'
 import ShortlinkBar from '../src/apps/ShortlinkBar'
+import config from '../src/js/config'
 
 import { createTestAppContext } from './context-test-helpers'
 const mocks = vi.hoisted(() => ({
@@ -21,10 +22,17 @@ vi.mock('../src/apps/ShortlinkBar/use-shortlink-creator', () => ({
 vi.mock('../src/js/clipboard.tools', () => ({ default: { copy: mocks.copy } }))
 vi.mock('../src/js/browser.api', () => ({ default: { probeSnoozeExtension: mocks.probeExtension } }))
 vi.mock('../src/components/hero-input', () => ({
-  default: ({ value, onSubmit, onSnooze }: {
-    value: string, onSubmit: (value: string) => void, onSnooze: () => void
+  default: ({ value, onChange, onSubmit, onSnooze, onFocus, inputRef }: {
+    value: string, onChange: (value: string, isClear?: boolean) => void,
+    onSubmit: (value: string) => void, onSnooze: () => void,
+    onFocus?: (event: React.FocusEvent<HTMLInputElement>) => void,
+    inputRef?: React.RefObject<HTMLInputElement | null>
   }) => <>
-    <button type="button" onClick={() => onSubmit(value)}>Submit {value}</button>
+    <input ref={inputRef} aria-label="Type or paste a link" value={value}
+      onChange={(event) => onChange(event.currentTarget.value)} onFocus={onFocus} />
+    <button type="button" onClick={() => onChange('', true)}>Clear URL</button>
+    <button type="button">Paste</button>
+    <button type="button" onClick={() => onSubmit(value)}>Create</button>
     <button type="button" onClick={onSnooze}>Snooze</button>
   </>
 }))
@@ -47,19 +55,57 @@ const creatorState = {
   notice: null
 }
 
-function renderBar(context: Partial<AppContextT> = {}, entry = '/') {
+function renderBar(context: Partial<AppContextT> = {}, entry = '/',
+  onMobileInputModeChange?: (active: boolean) => void) {
   const value = createTestAppContext(context)
   return render(
     <React.StrictMode>
       <AppContext.Provider value={value}>
-        <MemoryRouter initialEntries={[entry]}><ShortlinkBar /></MemoryRouter>
+        <MemoryRouter initialEntries={[entry]}>
+          <ShortlinkBar onMobileInputModeChange={onMobileInputModeChange} />
+        </MemoryRouter>
       </AppContext.Provider>
     </React.StrictMode>
   )
 }
 
+function setMobileViewport(matches: boolean) {
+  vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+    matches,
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    dispatchEvent: vi.fn()
+  }))
+}
+
+function installVisualViewport(offsetTop = 32, height = 480) {
+  const metrics = { offsetTop, height }
+  const viewport = new EventTarget() as VisualViewport
+  Object.defineProperties(viewport, {
+    offsetTop: { configurable: true, get: () => metrics.offsetTop },
+    height: { configurable: true, get: () => metrics.height }
+  })
+  const addEventListener = vi.spyOn(viewport, 'addEventListener')
+  const removeEventListener = vi.spyOn(viewport, 'removeEventListener')
+  Object.defineProperty(window, 'visualViewport', { configurable: true, value: viewport })
+  return { viewport, metrics, addEventListener, removeEventListener }
+}
+
+function getMobilePanel(input: HTMLElement) {
+  const panel = input.parentElement?.parentElement
+  if (!panel) throw new Error('Mobile shortlink panel not found')
+  return panel
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
+  setMobileViewport(false)
+  Object.defineProperty(window, 'visualViewport', { configurable: true, value: undefined })
+  ;(config as unknown as { target: 'webapp' | 'extension' }).target = 'webapp'
   mocks.submitLocation.mockResolvedValue('https://shlk.test/returned')
   mocks.probeExtension.mockResolvedValue(false)
   mocks.useCreator.mockImplementation((initialLocation: string) => ({
@@ -70,6 +116,94 @@ beforeEach(() => {
     recentItems: [],
     recentLoading: false
   }))
+})
+
+describe('mobile input mode', () => {
+  it('keeps the same input mounted and active through panel actions until Clear', () => {
+    setMobileViewport(true)
+    installVisualViewport()
+    const onModeChange = vi.fn()
+    const view = renderBar({}, '/', onModeChange)
+    const input = view.getByRole('textbox', { name: 'Type or paste a link' })
+    const panel = getMobilePanel(input)
+
+    fireEvent.focus(input)
+    expect(panel).toHaveClass('__mobile-convenience-state')
+    expect(onModeChange).toHaveBeenCalledWith(true)
+    expect(view.getByRole('textbox', { name: 'Type or paste a link' })).toBe(input)
+    expect(view.getByTestId('video')).toBeInTheDocument()
+    expect(window.scrollTo).not.toHaveBeenCalled()
+
+    fireEvent.click(view.getByRole('button', { name: 'Paste' }))
+    fireEvent.click(view.getByRole('button', { name: 'Create' }))
+    expect(panel).toHaveClass('__mobile-convenience-state')
+
+    fireEvent.click(view.getByRole('button', { name: 'Clear URL' }))
+    expect(panel).not.toHaveClass('__mobile-convenience-state')
+    expect(onModeChange).toHaveBeenLastCalledWith(false)
+    expect(view.getByRole('textbox', { name: 'Type or paste a link' })).toBe(input)
+  })
+
+  it('tracks the visual viewport and removes listeners when compact mode exits', () => {
+    setMobileViewport(true)
+    const visual = installVisualViewport(40, 360)
+    const view = renderBar()
+    const input = view.getByRole('textbox', { name: 'Type or paste a link' })
+    const panel = getMobilePanel(input)
+
+    fireEvent.focus(input)
+    expect(panel.style.getPropertyValue('--mobile-viewport-offset-top')).toBe('40px')
+    expect(panel.style.getPropertyValue('--mobile-viewport-height')).toBe('360px')
+    expect(visual.addEventListener).toHaveBeenCalledWith('scroll', expect.any(Function))
+    expect(visual.addEventListener).toHaveBeenCalledWith('resize', expect.any(Function))
+
+    visual.metrics.offsetTop = 72
+    visual.metrics.height = 284
+    visual.viewport.dispatchEvent(new Event('scroll'))
+    expect(panel.style.getPropertyValue('--mobile-viewport-offset-top')).toBe('72px')
+    expect(panel.style.getPropertyValue('--mobile-viewport-height')).toBe('284px')
+
+    fireEvent.click(view.getByRole('button', { name: 'Clear URL' }))
+    expect(visual.removeEventListener).toHaveBeenCalledWith('scroll', expect.any(Function))
+    expect(visual.removeEventListener).toHaveBeenCalledWith('resize', expect.any(Function))
+    expect(panel.style.getPropertyValue('--mobile-viewport-offset-top')).toBe('')
+    expect(panel.style.getPropertyValue('--mobile-viewport-height')).toBe('')
+  })
+
+  it('removes visual viewport listeners when unmounted while active', () => {
+    setMobileViewport(true)
+    const visual = installVisualViewport()
+    const view = renderBar()
+    fireEvent.focus(view.getByRole('textbox', { name: 'Type or paste a link' }))
+
+    visual.removeEventListener.mockClear()
+    view.unmount()
+    expect(visual.removeEventListener).toHaveBeenCalledWith('scroll', expect.any(Function))
+    expect(visual.removeEventListener).toHaveBeenCalledWith('resize', expect.any(Function))
+  })
+
+  it('does not activate compact mode on desktop focus', () => {
+    const onModeChange = vi.fn()
+    const view = renderBar({}, '/', onModeChange)
+    const input = view.getByRole('textbox', { name: 'Type or paste a link' })
+
+    fireEvent.focus(input)
+    expect(getMobilePanel(input)).not.toHaveClass('__mobile-convenience-state')
+    expect(onModeChange).not.toHaveBeenCalled()
+  })
+
+  it('starts active for a prefilled mobile extension', () => {
+    setMobileViewport(true)
+    installVisualViewport(24, 400)
+    ;(config as unknown as { target: 'webapp' | 'extension' }).target = 'extension'
+    const view = renderBar({ extension: { activeTabUrl: 'https://active.example', activeTabId: 42 } })
+    const input = view.getByRole('textbox', { name: 'Type or paste a link' })
+    const panel = getMobilePanel(input)
+
+    expect(panel).toHaveClass('__mobile-convenience-state')
+    expect(panel.style.getPropertyValue('--mobile-viewport-offset-top')).toBe('24px')
+    expect(view.getByTestId('video')).toBeInTheDocument()
+  })
 })
 
 describe('ShortlinkBar initialization', () => {

@@ -44,10 +44,11 @@ export default function ShortlinkBar({ onMobileInputModeChange }: Props) {
   )
   const snoozeCheckSequence = React.useRef(0)
   const heroInputRef = React.useRef<HTMLInputElement>(null)
+  const wrapperInputRef = React.useRef<HTMLDivElement>(null)
+
   const [mobileInputActive, setMobileInputActive] = React.useState(
     isMobile && config.target === 'extension' && Boolean(initialLocation)
   )
-  const scrollTimerRef = React.useRef<number | null>(null)
   const autoSubmitted = React.useRef(false)
 
   React.useEffect(() => {
@@ -102,16 +103,31 @@ export default function ShortlinkBar({ onMobileInputModeChange }: Props) {
     return () => window.removeEventListener('keydown', listener)
   }, [])
 
-  React.useEffect(() => () => {
-    if (scrollTimerRef.current !== null) window.clearTimeout(scrollTimerRef.current)
-  }, [])
+  React.useEffect(() => {
+    if (!isMobile || !mobileInputActive) return
+    const wrapper = wrapperInputRef.current
+    const viewport = window.visualViewport
+    if (!wrapper || !viewport) return
+
+    const updateViewport = () => {
+      wrapper.style.setProperty('--mobile-viewport-offset-top', `${viewport.offsetTop}px`)
+      wrapper.style.setProperty('--mobile-viewport-height', `${viewport.height}px`)
+    }
+    updateViewport()
+    viewport.addEventListener('scroll', updateViewport)
+    viewport.addEventListener('resize', updateViewport)
+    return () => {
+      viewport.removeEventListener('scroll', updateViewport)
+      viewport.removeEventListener('resize', updateViewport)
+      wrapper.style.removeProperty('--mobile-viewport-offset-top')
+      wrapper.style.removeProperty('--mobile-viewport-height')
+    }
+  }, [isMobile, mobileInputActive])
 
   function setMobileMode(active: boolean) {
     if (!isMobile || mobileInputActive === active) return
     setMobileInputActive(active)
     onMobileInputModeChange?.(active)
-    if (scrollTimerRef.current !== null) window.clearTimeout(scrollTimerRef.current)
-    if (active) scrollTimerRef.current = window.setTimeout(() => document.body.scrollTo(0, 0), 250)
   }
 
   function updateLocation(value: string, isClear = false) {
@@ -128,10 +144,10 @@ export default function ShortlinkBar({ onMobileInputModeChange }: Props) {
 
   return <div className={globalClass}>
     <div className={`${globalClass}__layout`}>
-      <div className={`${globalClass}__shortlink-block ${mobileClass}`}>
+      <div ref={wrapperInputRef} className={`${globalClass}__shortlink-block ${mobileClass}`}>
         <div className={`${globalClass}__offset-wrapper`}>
-          {!mobileInputActive && <Video className={`${globalClass}__video`} thumbnail={logoPosterUrl}
-            src={[{ link: logoVideoUrl, type: 'video/mp4' }]} aspectRatio={1200 / 360} timeout={1000} />}
+          <Video className={`${globalClass}__video`} thumbnail={logoPosterUrl}
+            src={[{ link: logoVideoUrl, type: 'video/mp4' }]} aspectRatio={1200 / 360} timeout={1000} />
           <HeroInput inputRef={heroInputRef} onChange={updateLocation}
             onSubmit={(value) => void creator.submitLocation(value)}
             onSnooze={() => void openSnooze()}
