@@ -2,6 +2,7 @@ name: shlk
 
 services:
   app:
+    image: ${SHLK_IMAGE:-shlk}:${SHLK_IMAGE_TAG:-latest}
     build:
       context: .
       target: runtime
