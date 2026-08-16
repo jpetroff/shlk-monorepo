@@ -13,9 +13,17 @@
   left: 0;
   right: 0;
 
+  &_dropdown-open {
+    z-index: @z-popup-top;
+  }
+
   @media @mq-mobile {
     padding: 1rem 1.25rem;
     padding-bottom: 0;
+  }
+
+  &__user {
+    position: relative;
   }
 
   &__middle {
@@ -115,6 +123,14 @@
   /* 
     Dropdown
    */
+  &__dropdown-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: @z-popup-low;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
   &__dropdown {
     width: 16rem;
   }

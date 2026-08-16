@@ -30,6 +30,7 @@ export default function Header({ backButton = '', title, position, hideLogo = fa
     [`${globalClass}_has-avatar`]: !!user?.avatar,
     [`${globalClass}_has-back-button`]: !!backButton,
     [`${globalClass}_sticky`]: position === HeaderPosition.sticky,
+    [`${globalClass}_dropdown-open`]: showDropdown,
     [`${globalClass}_fixed`]: position === HeaderPosition.fixed
   })
 
@@ -66,6 +67,9 @@ export default function Header({ backButton = '', title, position, hideLogo = fa
           {user.avatar ? <div className={`${globalClass}__account-link__avatar`} style={{ backgroundImage: `url(${user.avatar})` }} />
             : <div className={`${globalClass}__account-link__avatar`}>{user.name.charAt(0).toUpperCase()}</div>}</>}
       </ActionLink>
+      {user && showDropdown && <button type="button" className={`${globalClass}__dropdown-backdrop`}
+        aria-label="Close account menu" tabIndex={-1}
+        onPointerDown={(event) => event.stopPropagation()} onClick={closeDropdown} />}
       {user && <DropdownMenu className={`${globalClass}__dropdown`} onClose={closeDropdown} show={showDropdown}
         position={[DropdownPosition.top, DropdownPosition.right]} label="Account">
         <div className={`${globalClass}__dropdown-header`}>
