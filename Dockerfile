@@ -40,6 +40,7 @@ FROM base AS runtime
 ENV NODE_ENV=production
 ENV PORT=8002
 COPY --from=production-dependencies /app/node_modules ./node_modules
+COPY --from=production-dependencies /app/apps/api/node_modules ./apps/api/node_modules
 COPY package.json bun.lock ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/api/src apps/api/src
