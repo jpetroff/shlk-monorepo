@@ -285,27 +285,12 @@ its WAL state.
 
 ### Export the store extension
 
-The extension version in `apps/web/src/manifest.json` must be greater than the
-currently published version. BuildKit can export a ZIP whose manifest is at the
-archive root:
-
-```sh
-docker build \
-  --target extension-artifact \
-  --output type=local,dest=release \
-  --build-arg VITE_BACKEND_URL=https://shlk.example \
-  --build-arg VITE_PUBLIC_SERVICE_URL=https://shlk.example \
-  --build-arg VITE_DISPLAY_SERVICE_URL=shlk.example \
-  --build-arg VITE_EXTENSION_STORE_URL=https://chrome.google.com/webstore/detail/shlkcc-url-shortener/bjkhbppdemdfngnceocjmeapcfckfkok \
-  --build-arg WEB_APP_URL=https://shlk.example \
-  --build-arg EXTENSION_ORIGIN=chrome-extension://bjkhbppdemdfngnceocjmeapcfckfkok \
-  .
-unzip -t release/shlk-extension.zip
-```
-
-Inspect the ZIP and upload it through the Chrome Web Store developer dashboard.
-The production image intentionally contains only the website; the ZIP is a
-separate release artifact.
+The production image intentionally contains only the website. Build, validate,
+and upload the separate extension ZIP by following the
+[Chrome extension release guide](chrome-extension-release.md). It documents the
+recommended Docker artifact, an optional local package, generated-manifest
+checks, unpacked production testing, dashboard submission, and the release
+checklist.
 
 ## Known workflow and operations gaps
 

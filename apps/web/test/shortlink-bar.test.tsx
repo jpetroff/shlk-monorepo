@@ -31,7 +31,7 @@ vi.mock('../src/components/hero-input', () => ({
     <input ref={inputRef} aria-label="Type or paste a link" value={value}
       onChange={(event) => onChange(event.currentTarget.value)} onFocus={onFocus} />
     <button type="button" onClick={() => onChange('', true)}>Clear URL</button>
-    <button type="button">Paste</button>
+    <button type="button" onClick={() => onChange('https://pasted.example')}>Paste</button>
     <button type="button" onClick={() => onSubmit(value)}>Create</button>
     <button type="button" onClick={onSnooze}>Snooze</button>
   </>
@@ -119,6 +119,21 @@ beforeEach(() => {
 })
 
 describe('mobile input mode', () => {
+  it('activates compact mode when a URL is pasted without focusing the input', () => {
+    setMobileViewport(true)
+    const onModeChange = vi.fn()
+    const view = renderBar({}, '/', onModeChange)
+    const input = view.getByRole('textbox', { name: 'Type or paste a link' })
+    const panel = getMobilePanel(input)
+
+    expect(panel).not.toHaveClass('__mobile-convenience-state')
+    fireEvent.click(view.getByRole('button', { name: 'Paste' }))
+
+    expect(mocks.dispatch).toHaveBeenCalledWith({ type: 'location', value: 'https://pasted.example' })
+    expect(panel).toHaveClass('__mobile-convenience-state')
+    expect(onModeChange).toHaveBeenCalledWith(true)
+  })
+
   it('keeps the same input mounted and active through panel actions until Clear', () => {
     setMobileViewport(true)
     installVisualViewport()

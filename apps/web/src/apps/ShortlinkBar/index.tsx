@@ -133,6 +133,7 @@ export default function ShortlinkBar({ onMobileInputModeChange }: Props) {
   function updateLocation(value: string, isClear = false) {
     dispatch({ type: 'location', value })
     if (isClear) setMobileMode(false)
+    else if (value) setMobileMode(true)
   }
 
   const snoozeLocationValid = Boolean(context.user && validateURL(state.location))

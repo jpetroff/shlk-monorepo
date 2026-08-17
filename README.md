@@ -144,8 +144,9 @@ Litestream replication are documented in the
 [MongoDB-to-SQLite migration runbook](docs/mongodb-migration.md).
 
 The extension ZIP is a separate build target and is not included in the runtime
-image. See the [deployment guide](docs/development.md#export-the-store-extension)
-for its build and validation commands.
+image. See the [Chrome extension release guide](docs/chrome-extension-release.md)
+for development, production builds, packaging, validation, and Chrome Web Store
+upload steps.
 
 ESLint 10 uses an isolated TypeScript 6 compiler-API tooling workspace because
 TypeScript 7 does not expose the API required by `typescript-eslint`; application
