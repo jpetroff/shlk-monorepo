@@ -1,0 +1,52 @@
+x-litestream-image: &litestream-image
+  image: ${LITESTREAM_IMAGE:-litestream/litestream:0.5.15-scratch@sha256:fdd2bda105f352981be251ee39f36e7181578f4e994791dee87acf46b2f8741e}
+  platform: ${LITESTREAM_PLATFORM:-linux/amd64}
+  user: "${SHLK_RUNTIME_UID:-1000}:${SHLK_RUNTIME_GID:-1000}"
+  read_only: true
+  security_opt:
+    - no-new-privileges:true
+
+x-litestream-volumes: &litestream-volumes
+  - sqlite-data:/var/lib/shlk
+  - type: bind
+    source: ${LITESTREAM_REPLICA_PATH:?Set LITESTREAM_REPLICA_PATH}
+    target: /backup
+  - type: bind
+    source: ./docker/litestream.yml
+    target: /etc/litestream.yml
+    read_only: true
+
+services:
+  sqlite-restore:
+    <<: *litestream-image
+    command:
+      - restore
+      - -if-db-not-exists
+      - -integrity-check
+      - full
+      - /var/lib/shlk/shlk.sqlite
+    restart: "no"
+    volumes: *litestream-volumes
+    networks:
+      - backend
+
+  litestream:
+    <<: *litestream-image
+    command: [replicate]
+    init: true
+    restart: unless-stopped
+    depends_on:
+      sqlite-restore:
+        condition: service_completed_successfully
+    volumes: *litestream-volumes
+    expose:
+      - "9090"
+    networks:
+      - backend
+
+  app:
+    depends_on:
+      sqlite-restore:
+        condition: service_completed_successfully
+      litestream:
+        condition: service_started

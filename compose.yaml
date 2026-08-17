@@ -43,6 +43,7 @@ services:
 
 volumes:
   sqlite-data:
+    name: ${SQLITE_VOLUME_NAME:-shlk_sqlite-data}
 
 networks:
   backend:

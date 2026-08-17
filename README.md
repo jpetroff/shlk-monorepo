@@ -140,7 +140,8 @@ SQLite volume.
 SQLite runs in WAL mode with foreign keys, a busy timeout, and full synchronous
 writes. The application applies checked-in Drizzle migrations before listening.
 Use only one writable application instance for a database file; backup and
-optional Litestream replication remain deployment responsibilities.
+Litestream replication are documented in the
+[MongoDB-to-SQLite migration runbook](docs/mongodb-migration.md).
 
 The extension ZIP is a separate build target and is not included in the runtime
 image. See the [deployment guide](docs/development.md#export-the-store-extension)

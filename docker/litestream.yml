@@ -1,0 +1,23 @@
+addr: ":9090"
+
+logging:
+  level: info
+  type: json
+
+snapshot:
+  interval: 24h
+  retention: 168h
+
+shutdown-sync-timeout: 30s
+shutdown-sync-interval: 500ms
+
+dbs:
+  - path: /var/lib/shlk/shlk.sqlite
+    busy-timeout: 5s
+    checkpoint-interval: 1m
+    min-checkpoint-page-count: 1000
+    truncate-page-n: 121359
+    replica:
+      type: file
+      path: /backup/shlk
+      sync-interval: 10s

@@ -317,8 +317,8 @@ separate release artifact.
   or enforced coverage thresholds.
 - ESLint disables several normally useful TypeScript safety rules, and the
   repository has no formatter/check script.
-- The Compose SQLite volume has no built-in remote backup or high availability;
-  add and monitor Litestream separately when the deployment requires it.
+- The optional Compose override replicates SQLite to a local Litestream path;
+  it is not high availability or host-loss protection unless independently stored.
 - TLS certificates, reverse-proxy configuration, database backups, secret
   management, centralized logs, metrics and alerts are outside this repository
   and must be supplied by the deployment environment.

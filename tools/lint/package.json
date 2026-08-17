@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "lint": "eslint ../../apps/api/src ../../apps/api/test ../../apps/web/src ../../apps/web/vite.config.ts",
-    "lint:api": "eslint ../../apps/api/src ../../apps/api/test",
+    "lint": "eslint ../../apps/api/src ../../apps/api/scripts ../../apps/api/test ../../apps/web/src ../../apps/web/vite.config.ts",
+    "lint:api": "eslint ../../apps/api/src ../../apps/api/scripts ../../apps/api/test",
     "lint:web": "eslint ../../apps/web/src ../../apps/web/vite.config.ts"
   },
   "devDependencies": {

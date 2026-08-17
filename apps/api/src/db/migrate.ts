@@ -1,11 +1,8 @@
-import { fileURLToPath } from 'node:url'
-import { migrate } from 'drizzle-orm/bun-sqlite/migrator'
 import { db } from './client'
-
-const migrationsFolder = fileURLToPath(new URL('../../drizzle', import.meta.url))
+import { runMigrations } from './migration-runner'
 
 export function migrateDatabase(): void {
-  migrate(db, { migrationsFolder })
+  runMigrations(db)
 }
 
 if (import.meta.main) migrateDatabase()

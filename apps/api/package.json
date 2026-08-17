@@ -12,7 +12,8 @@
     "test": "bun run --cwd ../.. test:api",
     "db:generate": "drizzle-kit generate",
     "db:check": "drizzle-kit check",
-    "db:migrate": "bun src/db/migrate.ts"
+    "db:migrate": "bun src/db/migrate.ts",
+    "db:import:mongo": "bun --preload ./src/bun-compat.ts scripts/import-mongo-to-sqlite.ts"
   },
   "dependencies": {
     "@graphql-tools/merge": "9.2.2",
@@ -32,6 +33,7 @@
     "@types/express": "5.0.6",
     "@types/express-session": "1.19.0",
     "@types/underscore": "1.13.0",
-    "drizzle-kit": "0.31.10"
+    "drizzle-kit": "0.31.10",
+    "mongodb": "7.5.0"
   }
 }
