@@ -10,7 +10,7 @@ const Footer : React.FC<{}> = () => {
     <div className={`${globalClass}__wrapper`}>
       <div className={`${globalClass}`} >
         <div className={`${globalClass}__item`}>
-          Personal project by <Link href="https://evgn.link/me" newTab>envg.link</Link>
+          Personal project by <Link href="https://evgn.link/me" newTab>evgn.link</Link>
           · PP Mori typeface <Heart className={`${globalClass}__with-love-icon`} aria-hidden="true" />
         </div>
         <div className={`${globalClass}__item`}>
