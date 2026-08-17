@@ -51,8 +51,6 @@ openssl rand -hex 32
 Edit `.env.docker`, place the generated value in `APP_SESSION_SECRET`, and
 replace every `replace-with-*` placeholder. In particular:
 
-- Keep `SHLK_ENV_FILE=.env.docker`. If the production file is renamed, update
-  this value and pass the same path to Compose with `--env-file`.
 - Set `SHLK_IMAGE` to the registry repository, such as
   `ghcr.io/acme/shlk`, and use an immutable `SHLK_IMAGE_TAG` for releases.
 - Set the Google OAuth callback to `<WEB_APP_URL>/oauth/google/callback` and
@@ -64,17 +62,11 @@ replace every `replace-with-*` placeholder. In particular:
   TLS. Adjust `TRUST_PROXY` only to match the actual number of trusted proxy
   hops.
 
-Validate interpolation and the runtime env-file path without printing resolved
-secrets:
+Validate interpolation without printing the resolved secrets:
 
 ```sh
 docker compose --env-file .env.docker config --quiet
 ```
-
-The CLI `--env-file` supplies image tags, build arguments, ports, and other
-Compose interpolation values. The service's `env_file` entry loads that same
-file directly into the app container; Compose then overrides only `NODE_ENV`,
-`PORT`, and `SQLITE_PATH` with image-specific production values.
 
 The `VITE_*`, `WEB_APP_URL`, and `EXTENSION_ORIGIN` values are embedded in the
 website or extension during the image build. Changing one of them requires a
