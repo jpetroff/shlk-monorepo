@@ -14,7 +14,7 @@ export default function Home() {
     () => isMobile && Boolean(context.extension?.activeTabUrl)
   )
   const globalClass = styles.homeClass + '_home'
-  const mobileInputClass = mobileInputActive ? `${globalClass}_mobile-input-active` : ''
+  const mobileInputClass = mobileInputActive ? `__mobile-input-active` : ''
   return <div className={`${globalClass} ${mobileInputClass}`}>
     <div className={`${globalClass}__header`} aria-hidden={mobileInputActive || undefined}
       inert={mobileInputActive || undefined}>

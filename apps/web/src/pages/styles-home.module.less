@@ -2,9 +2,10 @@
 
 :local(.homeClass)_home {
   .mixin-fullscreen-page;
+  -webkit-overflow-scrolling: none;
 
   @media @mq-mobile {
-    &_mobile-input-active &__header {
+    .__mobile-input-active &__header {
       visibility: hidden;
     }
   }
