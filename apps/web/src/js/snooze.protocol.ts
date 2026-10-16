@@ -51,6 +51,7 @@ export function isSnoozeScheduleItem(value: unknown): value is SnoozeScheduleIte
   if (typeof item.id !== 'string' || !item.id.trim()) return false
   if (typeof item.awake !== 'number' || !Number.isFinite(item.awake) || item.awake <= 0) return false
   if (typeof item.location !== 'string') return false
+  if (item.siteTitle != null && typeof item.siteTitle !== 'string') return false
   try {
     const url = new URL(item.location)
     return url.protocol === 'http:' || url.protocol === 'https:'

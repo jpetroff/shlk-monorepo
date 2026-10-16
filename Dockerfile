@@ -17,12 +17,14 @@ ARG VITE_BACKEND_URL
 ARG VITE_PUBLIC_SERVICE_URL
 ARG VITE_DISPLAY_SERVICE_URL
 ARG VITE_EXTENSION_STORE_URL
+ARG VITE_FIREFOX_EXTENSION_STORE_URL
 ARG WEB_APP_URL
 ARG EXTENSION_ORIGIN
 ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
 ENV VITE_PUBLIC_SERVICE_URL=${VITE_PUBLIC_SERVICE_URL}
 ENV VITE_DISPLAY_SERVICE_URL=${VITE_DISPLAY_SERVICE_URL}
 ENV VITE_EXTENSION_STORE_URL=${VITE_EXTENSION_STORE_URL}
+ENV VITE_FIREFOX_EXTENSION_STORE_URL=${VITE_FIREFOX_EXTENSION_STORE_URL}
 ENV WEB_APP_URL=${WEB_APP_URL}
 ENV EXTENSION_ORIGIN=${EXTENSION_ORIGIN}
 COPY . .
@@ -62,3 +64,28 @@ RUN zip -qr /tmp/shlk-extension.zip .
 
 FROM scratch AS extension-artifact
 COPY --from=extension-package /tmp/shlk-extension.zip /shlk-extension.zip
+
+# Standalone Firefox release: no Chrome store ID or listing is required.
+FROM development-dependencies AS firefox-build
+ARG VITE_BACKEND_URL
+ARG VITE_PUBLIC_SERVICE_URL
+ARG VITE_DISPLAY_SERVICE_URL
+ARG VITE_FIREFOX_EXTENSION_STORE_URL
+ARG WEB_APP_URL
+ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
+ENV VITE_PUBLIC_SERVICE_URL=${VITE_PUBLIC_SERVICE_URL}
+ENV VITE_DISPLAY_SERVICE_URL=${VITE_DISPLAY_SERVICE_URL}
+ENV VITE_FIREFOX_EXTENSION_STORE_URL=${VITE_FIREFOX_EXTENSION_STORE_URL}
+ENV WEB_APP_URL=${WEB_APP_URL}
+COPY . .
+RUN bun -e 'for (const name of ["VITE_BACKEND_URL", "VITE_PUBLIC_SERVICE_URL", "VITE_DISPLAY_SERVICE_URL", "WEB_APP_URL"]) { if (!process.env[name]) throw new Error(`${name} is required`) }; for (const name of ["VITE_BACKEND_URL", "VITE_PUBLIC_SERVICE_URL", "WEB_APP_URL", "VITE_FIREFOX_EXTENSION_STORE_URL"]) { if (process.env[name] && new URL(process.env[name]).protocol !== "https:") throw new Error(`${name} must use https`) }'
+RUN bun run build:extension:firefox
+
+FROM firefox-build AS firefox-extension-package
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends zip
+WORKDIR /app/apps/web/dist/extension-firefox
+RUN zip -qr /tmp/shlk-extension-firefox.zip .
+
+FROM scratch AS firefox-extension-artifact
+COPY --from=firefox-extension-package /tmp/shlk-extension-firefox.zip /shlk-extension-firefox.zip

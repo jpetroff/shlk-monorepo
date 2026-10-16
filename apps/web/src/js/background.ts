@@ -1,4 +1,5 @@
 import config from './config'
+import { isTrustedExtensionSender } from './extension.api'
 import browserApi, { type ExtensionAlarm, type ExtensionMessageSender } from './browser.api'
 import proxyStorage, { StorageType } from './proxy-storage.extension'
 import {
@@ -140,7 +141,7 @@ export const BackgroundApp = {
 
   async upsert(item: SnoozeScheduleItem): Promise<void> {
     const state = await BackgroundApp.readState()
-    state.items[item.id] = item
+    state.items = { ...state.items, [item.id]: item }
     delete state.pendingClear[item.id]
     await BackgroundApp.writeState(state)
     if (item.awake <= Date.now()) await BackgroundApp.processDue(state)
@@ -196,18 +197,21 @@ export const BackgroundApp = {
     if (opened.length) {
       const first = opened[0]
       const suffix = opened.length > 1 ? ` and ${opened.length - 1} more` : ''
-      await browserApi.createNotification({
-        type: 'basic',
-        title: `Shlk.cc woke up ${opened.length === 1 ? 'a tab' : `${opened.length} tabs`}`,
-        message: `${first.siteTitle || first.location}${suffix}`,
-        iconUrl: '/assets/favicon/android-chrome-192x192.png',
-        priority: 1
-      }, `snooze:${first.id}`)
+      // Cleanup must not depend on the OS notification service responding.
       try {
         await BackgroundApp.flushPending(state)
       } catch (error) {
         console.error('Restored snoozes will be cleared on the next sync', error)
       }
+      void browserApi.createNotification({
+        type: 'basic',
+        title: `Shlk.cc woke up ${opened.length === 1 ? 'a tab' : `${opened.length} tabs`}`,
+        message: `${first.siteTitle || first.location}${suffix}`,
+        iconUrl: '/assets/favicon/android-chrome-192x192.png',
+        priority: 1
+      }, `snooze:${first.id}`).catch((error) => {
+        console.error('Could not display snooze notification', error)
+      })
     }
   },
 
@@ -237,7 +241,15 @@ export const BackgroundApp = {
     }
   },
 
-  handleMessage(message: unknown, _sender: ExtensionMessageSender, sendResponse: (response: SnoozeMessageResponse) => void): boolean {
+  handleMessage(message: unknown, sender: ExtensionMessageSender, sendResponse: (response: SnoozeMessageResponse) => void): boolean {
+    if (!isTrustedExtensionSender(sender, config.webAppOrigin)) {
+      sendResponse(messageResponse(false, 'Untrusted extension sender'))
+      return false
+    }
+    return BackgroundApp.dispatchMessage(message, sendResponse)
+  },
+
+  dispatchMessage(message: unknown, sendResponse: (response: SnoozeMessageResponse) => void): boolean {
     if (!isSnoozeMessage(message)) {
       sendResponse(messageResponse(false, 'Unsupported snooze message'))
       return false
@@ -257,16 +269,25 @@ export const BackgroundApp = {
       sendResponse(messageResponse(false, 'Untrusted website origin'))
       return false
     }
-    return BackgroundApp.handleMessage(message, sender, sendResponse)
+    return BackgroundApp.dispatchMessage(message, sendResponse)
   }
 }
 
-browserApi.onInstalled(() => {
-  void BackgroundApp.run(() => BackgroundApp.initialize()).catch(console.error)
-})
-browserApi.onStartup(() => {
-  void BackgroundApp.run(() => BackgroundApp.initialize()).catch(console.error)
-})
+let initialization: Promise<void> | undefined
+export function initializeBackground(): Promise<void> {
+  initialization ??= BackgroundApp.run(() => BackgroundApp.initialize()).catch((error) => {
+    initialization = undefined
+    console.error(error)
+  })
+  return initialization
+}
+
+browserApi.onInstalled(() => { void initializeBackground() })
+browserApi.onStartup(() => { void initializeBackground() })
 browserApi.onAlarm(BackgroundApp.handleAlarm)
 browserApi.onMessage(BackgroundApp.handleMessage)
 browserApi.onMessageExternal(BackgroundApp.handleExternalMessage)
+
+// MV3 contexts can be recreated without an install or browser-startup event.
+// Register every listener before starting any asynchronous initialization.
+if (browserApi.isInit) void initializeBackground()

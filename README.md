@@ -153,3 +153,11 @@ TypeScript 7 does not expose the API required by `typescript-eslint`; applicatio
 compilation remains pinned to TypeScript 7.0.2.
 
 The original repositories are intentionally not referenced by this workspace.
+
+## Firefox extension
+
+Run `bun run dev:extension:firefox` for a watched Firefox build, or
+`bun run build:extensions` to build Chrome and Firefox from the shared source.
+Chrome remains in `apps/web/dist/extension`; Firefox is in
+`apps/web/dist/extension-firefox`. See the [Firefox build and release guide](docs/firefox-extension-release.md)
+for temporary installation, permissions, validation, and production packages.

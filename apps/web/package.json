@@ -4,14 +4,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite --mode webapp",
-    "dev:extension": "NODE_ENV=development vite build --mode extension-development --watch",
-    "build": "bun run build:web && bun run build:extension",
+    "dev:extension": "bun run dev:extension:chrome",
+    "build": "bun run build:web && bun run build:extensions",
     "build:web": "NODE_ENV=production vite build --mode webapp",
-    "build:extension": "NODE_ENV=production vite build --mode extension",
+    "build:extension": "bun run build:extension:chrome",
     "lint": "bun run --cwd ../../tools/lint lint:web",
     "typecheck": "bunx tsc -p tsconfig.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "dev:extension:chrome": "SHLK_EXTENSION_BROWSER=chrome NODE_ENV=development vite build --mode extension-development --watch",
+    "dev:extension:firefox": "SHLK_EXTENSION_BROWSER=firefox NODE_ENV=development vite build --mode extension-development --watch",
+    "build:extension:chrome": "SHLK_EXTENSION_BROWSER=chrome NODE_ENV=production vite build --mode extension",
+    "build:extension:firefox": "SHLK_EXTENSION_BROWSER=firefox NODE_ENV=production vite build --mode extension",
+    "build:extensions": "bun run build:extension:chrome && bun run build:extension:firefox"
   },
   "dependencies": {
     "classnames": "2.5.1",

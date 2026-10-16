@@ -270,7 +270,7 @@ describe('website snooze availability', () => {
     useVisibleSnoozeState()
     const view = renderBar({ user })
     fireEvent.click(view.getByRole('button', { name: 'Snooze' }))
-    expect(await view.findByText(/Install or update the shlk.cc Chrome extension/)).toBeInTheDocument()
+    expect(await view.findByText(/Install or update the shlk.cc browser extension/)).toBeInTheDocument()
     expect(view.queryByTestId('snooze-list')).not.toBeInTheDocument()
   })
 

@@ -184,5 +184,8 @@ bun run --cwd apps/web typecheck
 bun run --cwd apps/web lint
 bun run --cwd apps/web test
 bun run --cwd apps/web build:web
-bun run --cwd apps/web build:extension
+bun run --cwd apps/web build:extensions
 ```
+
+Chrome/Firefox manifests, native APIs, website bridge, and scheduler recovery are documented in
+[browser-extension-builds.md](./browser-extension-builds.md).

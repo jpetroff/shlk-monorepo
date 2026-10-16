@@ -1,6 +1,5 @@
 import config from './config'
 import {
-  isSuccessfulSnoozeResponse,
   pingRequest,
   scheduleRequest,
   type SnoozeMessage,
@@ -8,37 +7,34 @@ import {
   type SnoozeScheduleItem
 } from './snooze.protocol'
 
-export type ExtensionAlarm = chrome.alarms.Alarm
-export type ExtensionAlarmCreateInfo = chrome.alarms.AlarmCreateInfo
-export type ExtensionNotificationOptions = chrome.notifications.NotificationOptions
-export type ExtensionMessageSender = chrome.runtime.MessageSender
+import {
+  getExtensionApi, isFirefoxExtension,
+  type ExtensionAlarm, type ExtensionAlarmCreateInfo, type ExtensionNotificationOptions,
+  type ExtensionTab, type MessageListener
+} from './extension.api'
+import { sendWebsiteBridgeMessage, validateSnoozeResponse, withMessageTimeout } from './website-bridge'
+export type { ExtensionAlarm, ExtensionAlarmCreateInfo, ExtensionNotificationOptions, ExtensionMessageSender } from './extension.api'
 export type TabObject = { id: number, url: string }
 
-const MESSAGE_TIMEOUT_MS = 2_000
-
-function chromeApi(): typeof chrome | undefined {
-  return (globalThis as typeof globalThis & { chrome?: typeof chrome }).chrome
-}
-
 class BrowserApi {
-  public readonly isInit = config.target === 'extension' && Boolean(chromeApi()?.runtime?.id)
+  public readonly isInit = config.target === 'extension' && Boolean(getExtensionApi()?.runtime?.id)
 
   public async getTab(active?: boolean): Promise<TabObject | null> {
-    const api = chromeApi()
+    const api = getExtensionApi()
     if (!this.isInit || !api?.tabs) return null
     const [tab] = await api.tabs.query({ active, lastFocusedWindow: true })
     return tab?.id != null && tab.url ? { id: tab.id, url: tab.url } : null
   }
 
   public async findTab(url: string): Promise<TabObject[]> {
-    const api = chromeApi()
+    const api = getExtensionApi()
     if (!this.isInit || !api?.tabs) return []
     const tabs = await api.tabs.query({ url })
     return tabs.flatMap((tab) => tab.id != null && tab.url ? [{ id: tab.id, url: tab.url }] : [])
   }
 
   public async closeTab(tabId: number): Promise<void> {
-    const api = chromeApi()
+    const api = getExtensionApi()
     if (!this.isInit || !api?.tabs) return
     await api.tabs.remove(tabId)
   }
@@ -48,113 +44,121 @@ class BrowserApi {
     if (tab) await this.closeTab(tab.id)
   }
 
-  private sendRuntimeMessage(message: SnoozeMessage): Promise<SnoozeMessageResponse> {
-    const api = chromeApi()
-    if (!api?.runtime?.sendMessage) return Promise.reject(new Error('Chrome extension messaging is unavailable'))
-    if (config.target !== 'extension' && !config.extensionId) {
-      return Promise.reject(new Error('The Chrome extension ID is not configured'))
-    }
+  private websiteTransport: 'chrome' | 'bridge' | undefined
+  private probing: Promise<boolean> | undefined
 
-    return new Promise((resolve, reject) => {
-      let settled = false
-      const timeout = globalThis.setTimeout(() => {
-        if (settled) return
-        settled = true
-        reject(new Error('The Chrome extension did not respond'))
-      }, MESSAGE_TIMEOUT_MS)
-      const finish = (response?: unknown) => {
-        if (settled) return
-        settled = true
-        globalThis.clearTimeout(timeout)
-        const runtimeError = (api.runtime as typeof api.runtime & { lastError?: { message?: string } }).lastError
-        if (runtimeError) { reject(new Error(runtimeError.message || 'Chrome extension messaging failed')); return }
-        if (!isSuccessfulSnoozeResponse(response)) {
-          const error = response && typeof response === 'object' && 'error' in response
-            ? String(response.error) : 'The Chrome extension is incompatible'
-          reject(new Error(error))
-          return
-        }
-        resolve(response)
+  private sendChromeWebsiteMessage(message: SnoozeMessage): Promise<SnoozeMessageResponse> {
+    // Website Chrome messaging is callback-based and requires the store item ID.
+    const api = (globalThis as typeof globalThis & { chrome?: {
+      runtime?: {
+        lastError?: { message?: string }
+        sendMessage(id: string, message: unknown, callback: (response: unknown) => void): void
       }
-      try {
-        const sendMessage = api.runtime.sendMessage as unknown as {
-          (message: unknown, callback: (response?: unknown) => void): void
-          (extensionId: string, message: unknown, callback: (response?: unknown) => void): void
-        }
-        if (config.target === 'extension') Reflect.apply(sendMessage, api.runtime, [message, finish])
-        else Reflect.apply(sendMessage, api.runtime, [config.extensionId, message, finish])
-      } catch (error) {
-        if (!settled) {
-          settled = true
-          globalThis.clearTimeout(timeout)
-          reject(error)
-        }
-      }
-    })
+    } }).chrome
+    if (!api?.runtime?.sendMessage || !config.extensionId) {
+      return Promise.reject(new Error('Extension messaging is unavailable'))
+    }
+    const runtime = api.runtime
+    return withMessageTimeout(() => new Promise<unknown>((resolve, reject) => {
+      runtime.sendMessage(config.extensionId, message, (response: unknown) => {
+        const error = runtime.lastError
+        if (error) reject(new Error(error.message || 'Extension messaging failed'))
+        else resolve(response)
+      })
+    })).then(validateSnoozeResponse)
+  }
+
+  private sendRuntimeMessage(message: SnoozeMessage): Promise<SnoozeMessageResponse> {
+    if (config.target === 'extension') {
+      const api = getExtensionApi()
+      if (!this.isInit || !api) return Promise.reject(new Error('Extension messaging is unavailable'))
+      return withMessageTimeout(() => api.runtime.sendMessage(message)).then(validateSnoozeResponse)
+    }
+    if (this.websiteTransport === 'chrome') return this.sendChromeWebsiteMessage(message)
+    if (this.websiteTransport === 'bridge') return sendWebsiteBridgeMessage(message, config.webAppOrigin)
+    return Promise.reject(new Error('The extension is unavailable; retry detection'))
   }
 
   public async probeSnoozeExtension(): Promise<boolean> {
     if (config.target === 'extension') return this.isInit
+    if (this.probing) return this.probing
+    this.probing = this.detectWebsiteTransport()
+    try { return await this.probing } finally { this.probing = undefined }
+  }
+
+  private async detectWebsiteTransport(): Promise<boolean> {
+    this.websiteTransport = undefined
     try {
-      await this.sendRuntimeMessage(pingRequest())
+      await this.sendChromeWebsiteMessage(pingRequest())
+      this.websiteTransport = 'chrome'
       return true
     } catch {
-      return false
+      try {
+        await sendWebsiteBridgeMessage(pingRequest(), config.webAppOrigin)
+        this.websiteTransport = 'bridge'
+        return true
+      } catch {
+        return false
+      }
     }
   }
 
-  public scheduleSnooze(item: SnoozeScheduleItem): Promise<SnoozeMessageResponse> {
+  public async scheduleSnooze(item: SnoozeScheduleItem): Promise<SnoozeMessageResponse> {
+    if (config.target !== 'extension' && !this.websiteTransport) await this.probeSnoozeExtension()
+    // Never fall back or resend a schedule after an ambiguous transport timeout.
     return this.sendRuntimeMessage(scheduleRequest(item))
   }
 
-  public onMessage(callback: Parameters<typeof chrome.runtime.onMessage.addListener>[0]): void {
-    chromeApi()?.runtime?.onMessage?.addListener(callback)
+  public onMessage(callback: MessageListener): void {
+    getExtensionApi()?.runtime?.onMessage?.addListener(callback)
   }
 
-  public onMessageExternal(callback: Parameters<typeof chrome.runtime.onMessageExternal.addListener>[0]): void {
-    chromeApi()?.runtime?.onMessageExternal?.addListener(callback)
+  public onMessageExternal(callback: MessageListener): void {
+    getExtensionApi()?.runtime?.onMessageExternal?.addListener(callback)
   }
 
-  public openExternal(url: string): Promise<chrome.tabs.Tab | undefined> {
-    const api = chromeApi()
+  public openExternal(url: string): Promise<ExtensionTab | undefined> {
+    const api = getExtensionApi()
     if (!this.isInit || !api?.tabs) return Promise.resolve(undefined)
     return api.tabs.create({ url })
   }
 
   public setAlarm(name: string, alarm: ExtensionAlarmCreateInfo): Promise<void> {
-    const api = chromeApi()
+    const api = getExtensionApi()
     if (!this.isInit || !api?.alarms) return Promise.resolve()
-    return api.alarms.create(name, alarm)
+    return Promise.resolve(api.alarms.create(name, alarm))
   }
 
   public onAlarm(callback: (alarm: ExtensionAlarm) => void): void {
-    chromeApi()?.alarms?.onAlarm.addListener(callback)
+    getExtensionApi()?.alarms?.onAlarm.addListener(callback)
   }
 
-  public onInstalled(callback: Parameters<typeof chrome.runtime.onInstalled.addListener>[0]): void {
-    chromeApi()?.runtime?.onInstalled.addListener(callback)
+  public onInstalled(callback: () => void): void {
+    getExtensionApi()?.runtime?.onInstalled.addListener(callback)
   }
 
   public onStartup(callback: () => void): void {
-    chromeApi()?.runtime?.onStartup.addListener(callback)
+    getExtensionApi()?.runtime?.onStartup.addListener(callback)
   }
 
   public getAlarms(): Promise<ExtensionAlarm[]> {
-    return chromeApi()?.alarms?.getAll() ?? Promise.resolve([])
+    return getExtensionApi()?.alarms?.getAll() ?? Promise.resolve([])
   }
 
   public removeAlarm(name: string): Promise<boolean> {
-    return chromeApi()?.alarms?.clear(name) ?? Promise.resolve(false)
+    return getExtensionApi()?.alarms?.clear(name) ?? Promise.resolve(false)
   }
 
   public createNotification(options: ExtensionNotificationOptions, id?: string): Promise<string | undefined> {
-    const api = chromeApi()
+    const api = getExtensionApi()
     if (!this.isInit || !api?.notifications) return Promise.resolve(undefined)
-    return id ? api.notifications.create(id, options) : api.notifications.create(options)
+    const { priority, ...basic } = options
+    const supported = isFirefoxExtension() ? basic : { ...basic, ...(priority == null ? {} : { priority }) }
+    return api.notifications.create(id ?? '', supported)
   }
 
   public onNotificationClick(callback: (id: string) => void): void {
-    chromeApi()?.notifications?.onClicked.addListener(callback)
+    getExtensionApi()?.notifications?.onClicked.addListener(callback)
   }
 }
 

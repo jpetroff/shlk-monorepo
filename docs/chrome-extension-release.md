@@ -1,6 +1,7 @@
 # Build and publish the Chrome extension
 
-This guide covers the SHLK Manifest V3 extension in `apps/web`: developing it
+For Firefox, see [the Firefox build and release guide](firefox-extension-release.md).
+The shared aggregate build produces both browsers; this guide covers the SHLK Manifest V3 extension in `apps/web`: developing it
 locally, creating a production ZIP, validating the ZIP, and uploading a new
 version to the Chrome Web Store.
 

@@ -173,12 +173,14 @@ export default function ShortlinkBar({ onMobileInputModeChange }: Props) {
         {state.showSnoozeOptions && snoozeAvailability === 'available' && !snoozeLocationValid &&
           <div className={`${globalClass}__snooze-status`} role="status">Enter a valid link before snoozing it.</div>}
         {state.showSnoozeOptions && snoozeAvailability === 'checking' &&
-          <div className={`${globalClass}__snooze-status`} role="status">Checking for the Chrome extension…</div>}
+          <div className={`${globalClass}__snooze-status`} role="status">Checking for the browser extension…</div>}
         {state.showSnoozeOptions && snoozeAvailability === 'unavailable' &&
           <div className={`${globalClass}__snooze-status`} role="status">
-            <div>Install or update the shlk.cc Chrome extension to reopen snoozed links.</div>
+            <div>Install or update the shlk.cc browser extension to reopen snoozed links.</div>
             <div className={`${globalClass}__snooze-status__actions`}>
-              {config.extensionLink && <ButtonLink href={config.extensionLink} newTab label="Install extension"
+              {config.extensionLink && <ButtonLink href={config.extensionLink} newTab label="Install for Chrome"
+                size={ButtonSize.LARGE} type={ButtonType.PRIMARY} />}
+              {config.firefoxExtensionLink && <ButtonLink href={config.firefoxExtensionLink} newTab label="Install for Firefox"
                 size={ButtonSize.LARGE} type={ButtonType.PRIMARY} />}
               <Button label="Retry" size={ButtonSize.LARGE} type={ButtonType.SECONDARY}
                 onClick={() => void openSnooze()} />

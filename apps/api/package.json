@@ -13,7 +13,8 @@
     "db:generate": "drizzle-kit generate",
     "db:check": "drizzle-kit check",
     "db:migrate": "bun src/db/migrate.ts",
-    "db:import:mongo": "bun --preload ./src/bun-compat.ts scripts/import-mongo-to-sqlite.ts"
+    "db:import:mongo": "bun --preload ./src/bun-compat.ts scripts/import-mongo-to-sqlite.ts",
+    "dev:extension:firefox": "bun --watch src/index.ts"
   },
   "dependencies": {
     "@graphql-tools/merge": "9.2.2",

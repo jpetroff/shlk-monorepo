@@ -12,6 +12,7 @@ const config = {
   serviceUrl: publicServiceUrl,
   displayServiceUrl: import.meta.env.VITE_DISPLAY_SERVICE_URL || 'shlk.cc',
   extensionLink: import.meta.env.VITE_EXTENSION_STORE_URL || '',
+  firefoxExtensionLink: import.meta.env.VITE_FIREFOX_EXTENSION_STORE_URL || '',
   extensionId,
   webAppOrigin
 } as const

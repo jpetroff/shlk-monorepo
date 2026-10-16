@@ -78,10 +78,12 @@ export default function UserSettings({ className }: Props) {
     </div>
     {config.target !== 'extension' && <div className={`${globalClass}__download`}>
       <span className={`${globalClass}__download__label`}>Install browser extension</span>
-      <Link href={config.extensionLink} newTab className={`${globalClass}__download__link`}>
+      {config.extensionLink && <Link href={config.extensionLink} newTab className={`${globalClass}__download__link`}>
         <img src="/assets/chrome_store.jpg" srcSet="/assets/chrome_store@2x.jpg 2x"
           className={`${globalClass}__download__link-content`} alt="Install from the Chrome Web Store" />
-      </Link>
+      </Link>}
+      {config.firefoxExtensionLink && <Link href={config.firefoxExtensionLink} newTab
+        className={`${globalClass}__download__link`}>Install from Firefox Add-ons</Link>}
     </div>}
     <div className={`${globalClass}__submit`}>
       <Button htmlType="submit" isDisabled={!dirty || !userTag.trim()} isLoading={saving} size={ButtonSize.LARGE}

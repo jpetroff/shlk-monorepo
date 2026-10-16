@@ -11,6 +11,7 @@ interface ImportMetaEnv {
   readonly VITE_PUBLIC_SERVICE_URL?: string
   readonly VITE_DISPLAY_SERVICE_URL?: string
   readonly VITE_EXTENSION_STORE_URL?: string
+  readonly VITE_FIREFOX_EXTENSION_STORE_URL?: string
 }
 
 interface ImportMeta {

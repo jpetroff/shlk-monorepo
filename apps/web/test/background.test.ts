@@ -142,3 +142,42 @@ describe('background snooze scheduler', () => {
     expect(respond).toHaveBeenCalledWith(expect.objectContaining({ ok: false, error: 'Untrusted website origin' }))
   })
 })
+
+
+test('notification failure does not prevent server cleanup or cause duplicate tabs', async () => {
+  mocks.stored = { items: { due: { id: 'due', location: 'https://due.example', awake: 1 } }, pendingClear: {} }
+  mocks.createNotification.mockRejectedValue(new Error('notifications denied'))
+  const clear = vi.spyOn(AppNetwork, 'clearShortlinks').mockResolvedValue(undefined)
+  await BackgroundApp.processDue()
+  await BackgroundApp.processDue()
+  expect(clear).toHaveBeenCalledWith(['due'])
+  expect(mocks.openExternal).toHaveBeenCalledOnce()
+  expect(mocks.stored).toEqual({ items: {}, pendingClear: {} })
+})
+
+test('rebuilds persisted alarms on initialization while offline', async () => {
+  const awake = Date.now() + 600000
+  mocks.stored = { items: { future: { id: 'future', location: 'https://future.example', awake } }, pendingClear: {} }
+  vi.spyOn(AppNetwork, 'getShortlinks').mockRejectedValue(new Error('offline'))
+  await BackgroundApp.initialize()
+  expect(mocks.setAlarm).toHaveBeenCalledWith(NEXT_WAKE_ALARM, { when: awake })
+  expect(mocks.stored).toMatchObject({ items: { future: { awake } } })
+})
+
+test('rejects an untrusted internal sender before scheduling', () => {
+  const respond = vi.fn()
+  BackgroundApp.handleMessage({ type: 'shlk:ping', protocol: 1 }, { id: 'other', url: 'https://shlk.example' }, respond)
+  expect(respond).toHaveBeenCalledWith(expect.objectContaining({ ok: false, error: 'Untrusted extension sender' }))
+})
+
+
+test('an unresponsive notification service cannot block cleanup or the scheduler queue', async () => {
+  mocks.stored = { items: { due: { id: 'due', location: 'https://due.example', awake: 1 } }, pendingClear: {} }
+  mocks.createNotification.mockReturnValue(new Promise(() => {}))
+  const clear = vi.spyOn(AppNetwork, 'clearShortlinks').mockResolvedValue(undefined)
+  await BackgroundApp.run(() => BackgroundApp.processDue())
+  await BackgroundApp.run(() => BackgroundApp.processDue())
+  expect(clear).toHaveBeenCalledWith(['due'])
+  expect(mocks.openExternal).toHaveBeenCalledOnce()
+  expect(mocks.stored).toEqual({ items: {}, pendingClear: {} })
+})
