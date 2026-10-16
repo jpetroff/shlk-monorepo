@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "version": "2.1.0",
+    "version": "2.1.1",
     "name": "shlk.cc \u2014 copy and create shortlinks",
     "icons": {
         "128": "/assets/favicon/chrome_extension_icon.png"

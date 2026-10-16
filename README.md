@@ -27,6 +27,37 @@ The full clone-to-development, testing, extension and production guide is in
 - API database commands are `db:generate`, `db:check`, and `db:migrate` in
   the `@shlk/api` workspace.
 
+Run `make help` to list build shortcuts:
+
+| Shortcut | Result |
+| --- | --- |
+| `make build-extensions` | Production Chrome and Firefox builds |
+| `make build-chrome` / `make build-firefox` | Production build for one browser |
+| `make package-extensions` | Build both browsers, then create `release/shlk-extension.zip` and `release/shlk-extension-firefox.zip` |
+| `make package-chrome` / `make package-firefox` | Build and ZIP one browser |
+| `make docker-build` | Build the deployment image with Compose and `.env.docker` |
+
+Set the production build variables described in the
+[Chrome](docs/chrome-extension-release.md) and
+[Firefox](docs/firefox-extension-release.md) release guides before packaging;
+the local builds use the existing Bun/Vite environment loading. For example,
+to use the same configuration as Docker, run
+`make package-extensions BUN='bun --env-file=.env.docker'`.
+Packaging requires Python 3.9 or newer (standard library only) and rejects
+non-HTTPS/localhost manifest permissions and missing manifest resources.
+To ZIP an existing production build without rebuilding, run
+`python3 scripts/package-extensions.py` (optionally pass `chrome` or `firefox`).
+The archives contain the extension files directly, with `manifest.json` at the
+root, and replace previous ZIPs so removed files cannot linger. This layout
+matches the [Chrome Web Store](https://developer.chrome.com/docs/webstore/prepare#zip-your-extension-files)
+and [Mozilla AMO](https://extensionworkshop.com/documentation/publish/package-your-extension/)
+upload format. Store validation, listing metadata, and signing remain part of
+the release guides.
+
+Override `RELEASE_DIR` to change the ZIP destination or `DOCKER_ENV_FILE` to use
+another Compose environment file, for example
+`make docker-build DOCKER_ENV_FILE=.env.production`.
+
 Use `bun run test`, not bare `bun test`: the web workspace uses Vitest/jsdom,
 while the API uses Bun's test runner. Focused commands are `bun run test:api`
 and `bun run test:web`.

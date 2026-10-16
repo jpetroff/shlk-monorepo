@@ -9,6 +9,7 @@ apps/api/data/
 apps/*/*.crx
 apps/*/*.zip
 coverage/
+release/
 playwright/.auth/
 *.log
 .DS_Store

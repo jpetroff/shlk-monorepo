@@ -130,17 +130,16 @@ bun run --filter @shlk/web build:extension
 ```
 
 This creates the unpacked production extension in
-`apps/web/dist/extension`. If `zip` is installed, it can be packaged manually:
+`apps/web/dist/extension`. Package that build with Python 3.9 or newer:
 
 ```sh
-mkdir -p release
-rm -f release/shlk-extension.zip
-(cd apps/web/dist/extension && zip -qr ../../../../release/shlk-extension.zip .)
+python3 scripts/package-extensions.py chrome
 ```
 
-Removing the previous ZIP is important: updating an existing ZIP can retain
-files that no longer belong to the extension. The Docker build avoids that
-stale-file risk and remains the recommended source of the uploaded artifact.
+The script creates a fresh `release/shlk-extension.zip`, checks production
+manifest origins and referenced resources, and replaces any previous ZIP.
+Use `make package-chrome` to build and package in one step with the same
+production environment values. `make package-extensions` does both browsers.
 
 ## Validate the artifact
 

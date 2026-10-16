@@ -79,12 +79,15 @@ WEB_APP_URL=https://shlk.cc \
 bun run build:extension:firefox
 
 bunx web-ext@10.8.0 lint --source-dir apps/web/dist/extension-firefox
-bunx web-ext@10.8.0 build \
-  --source-dir apps/web/dist/extension-firefox \
-  --artifacts-dir apps/web/dist/releases \
-  --filename shlk-extension-firefox.zip --overwrite-dest
-unzip -t apps/web/dist/releases/shlk-extension-firefox.zip
+python3 scripts/package-extensions.py firefox
+unzip -t release/shlk-extension-firefox.zip
 ```
+
+The packaging script requires Python 3.9 or newer and creates a fresh ZIP with
+`manifest.json` at the root. It checks production manifest origins and referenced
+resources before replacing the previous ZIP. Use `make package-firefox` to build
+and package in one step with the same production environment values, or
+`make package-extensions` for both browsers.
 
 Set `VITE_FIREFOX_EXTENSION_STORE_URL` to the HTTPS AMO listing when it exists;
 leave it empty beforehand. The website omits the Firefox install link while it is
