@@ -5,7 +5,10 @@
   -webkit-overflow-scrolling: none;
 
   @media @mq-mobile {
-    .__mobile-input-active &__header {
+    &.__mobile-input-active {
+      padding-top: 0;
+    }
+    &.__mobile-input-active &__header {
       visibility: hidden;
     }
   }

@@ -76,3 +76,26 @@ The temporary add-on and disposable API process were removed/stopped after the
 checks. The original Firefox process and pre-existing website server were left
 running. Load `apps/web/dist/extension-firefox/manifest.json` again for local
 development; the ZIPs use production origins.
+
+## Popup sizing validation — 2026-10-16
+
+Mozilla's [popup resizing guidance](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/user_interface/Popups#popup_resizing)
+specifies that Firefox measures the body in standards mode. Move the shared
+480×600 popup dimensions from `html.extension` to `html.extension body`, replacing
+the popup body's inherited viewport-based height. The extension build also emits
+the `extension` class in its HTML so sizing applies before JavaScript initializes.
+
+Using the existing Firefox Nightly 153.0 session and temporary development add-on:
+
+- Before the change, the popup opened at about 320px wide with clipped content.
+- After add-on reload, its developer tools reported a 480×600 viewport.
+- Temporarily changing the body's inline dimensions to 400×500 resized the live
+  popup to exactly 400×500, confirmed by `innerWidth` and `innerHeight`.
+- Closing/reopening discarded those temporary styles and restored 480×600.
+  Reloading the popup document also retained 480×600.
+
+Repository lint, TypeScript checks, 88 API tests, 100 web tests, and the website
+and both extension builds passed. The existing Litestream integration test was
+skipped. Web tests used the installed Node 24 runtime with
+`NODE_OPTIONS=--no-experimental-webstorage`; the host's default Node 20 is too old
+for the installed jsdom dependencies. Chrome's live popup was not retested.

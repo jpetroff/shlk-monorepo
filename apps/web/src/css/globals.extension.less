@@ -1,4 +1,7 @@
-html.extension {
+// Firefox measures the body, not the root, when sizing toolbar popups.
+// Explicit dimensions also keep sizing independent of the initial viewport.
+// https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/user_interface/Popups#popup_resizing
+html.extension body {
 	width: 480px;
 	height: 600px;
 }

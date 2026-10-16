@@ -35,11 +35,11 @@
     position: relative;
     display: flex;
     flex-direction: column;
-  }
-  @media @mq-mobile {
-    &__shortlink-block {
+    @media @mq-mobile {
       flex-grow: 1;
       justify-content: center;
+      overflow: hidden;
+      --webkit-touch-overflow: none;
     }
   }
 

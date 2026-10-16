@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "version": "1.2.26",
+    "version": "2.1.0",
     "name": "shlk.cc \u2014 copy and create shortlinks",
     "icons": {
         "128": "/assets/favicon/chrome_extension_icon.png"
@@ -22,8 +22,8 @@
     "commands": {
         "_execute_action": {
             "suggested_key": {
-                "default": "Ctrl+Shift+S",
-                "mac": "Command+Shift+S"
+                "default": "Alt+Shift+S",
+                "mac": "Option+Shift+S"
             },
             "description": "Open share link extension popup to shorten URL or snooze it"
         }

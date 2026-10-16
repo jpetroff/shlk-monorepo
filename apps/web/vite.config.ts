@@ -106,6 +106,10 @@ function extensionManifest(backendUrl: string, webAppUrl: string, browser: Exten
   return {
     name: 'shlk-extension-manifest',
     apply: 'build',
+    transformIndexHtml(html) {
+      // Apply popup sizing before scripts load and Firefox first measures it.
+      return html.replace('class="document"', 'class="document extension"')
+    },
     buildStart() {
       this.addWatchFile(resolve(import.meta.dirname, 'src/manifest.json'))
     },
